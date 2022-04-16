@@ -1,0 +1,4 @@
+baseURL: "https://d1k66v7wl0jkwt.cloudfront.net/"
+languageCode: "en-us"
+title: "My New Hugo Site"
+theme: "PaperMod"
