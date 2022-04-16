@@ -81,6 +81,34 @@
       "type": "build"
     },
     {
+      "name": "@aws-lambda-powertools/commons",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-lambda-powertools/logger",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-lambda-powertools/metrics",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-lambda-powertools/tracer",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/client-s3",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-sdk/client-translate",
+      "type": "runtime"
+    },
+    {
+      "name": "@types/aws-lambda",
+      "type": "runtime"
+    },
+    {
       "name": "aws-cdk-lib",
       "version": "^2.20.0",
       "type": "runtime"
@@ -88,6 +116,15 @@
     {
       "name": "constructs",
       "version": "^10.0.5",
+      "type": "runtime"
+    },
+    {
+      "name": "markdown-doc-builder",
+      "version": "1.3.0",
+      "type": "runtime"
+    },
+    {
+      "name": "rss-parser",
       "type": "runtime"
     }
   ],
