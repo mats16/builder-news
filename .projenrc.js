@@ -14,6 +14,10 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'markdown-doc-builder@1.3.0',
     'rss-parser',
   ],
+  gitignore: [
+    'hugo/content',
+    'hugo/public',
+  ],
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
   // devDeps: [],             /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */

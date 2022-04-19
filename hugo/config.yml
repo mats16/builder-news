@@ -1,4 +1,14 @@
-baseURL: "https://d1k66v7wl0jkwt.cloudfront.net/"
-languageCode: "en-us"
-title: "My New Hugo Site"
-theme: "PaperMod"
+baseURL: https://news.wktk.dev/
+title: Builder News
+theme: PaperMod
+
+hasCJKLanguage: true
+
+defaultContentLanguage: en
+languages:
+  en:
+    languageName: English
+    weight: 2
+  ja:
+    languageName: Japanese
+    weight: 1

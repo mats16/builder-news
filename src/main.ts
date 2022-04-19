@@ -1,5 +1,5 @@
 import { App } from 'aws-cdk-lib';
-import { RssSummaryStack } from './rss-summary-stack';
+import { HugoStack } from './hugo-auto-generating-stack';
 
 // for development, use account/region from cdk cli
 const devEnv = {
@@ -9,7 +9,7 @@ const devEnv = {
 
 const app = new App();
 
-new RssSummaryStack(app, 'rss-summary-dev', { env: devEnv });
+new HugoStack(app, 'builder-news-dev', { env: devEnv });
 // new MyStack(app, 'rss-sumally-prod', { env: prodEnv });
 
 app.synth();
