@@ -2,7 +2,7 @@ const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
   cdkVersion: '2.20.0',
   defaultReleaseBranch: 'main',
-  name: 'rss-summary',
+  name: 'builder-news',
   deps: [
     '@aws-lambda-powertools/commons',
     '@aws-lambda-powertools/logger',

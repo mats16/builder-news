@@ -70,7 +70,7 @@ export class HugoStack extends Stack {
         ],
       },
       defaultRootObject: 'index.html',
-      errorResponses: [{ httpStatus: 404, ttl: Duration.minutes(1), responsePagePath: '/404.html' }],
+      errorResponses: [{ httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' }],
     });
 
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
@@ -84,7 +84,6 @@ export class HugoStack extends Stack {
       environmentVariables: {
         HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
         BUCKET_NAME: { value: bucket.bucketName },
-        DISTRIBUTION_ID: { value: cfDistribution.distributionId },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
@@ -144,7 +143,7 @@ export class HugoStack extends Stack {
     const createSummaryTask = new sfn.Parallel(this, 'Create Summary').branch(createSummaryEnTask).branch(createSummaryJaTask);
     createSummaryTask.next(hugoBuildTask).next(clearCdnCacheTask);
 
-    const stateMachine = new sfn.StateMachine(this, 'CreateNewPosts', {
+    const generateHugoContentsJob = new sfn.StateMachine(this, 'GenerateHugoContents', {
       definition: createSummaryTask,
     });
 
@@ -152,7 +151,8 @@ export class HugoStack extends Stack {
       description: 'Create hugo contents every day',
       schedule: events.Schedule.expression('cron(59 7/8 ? * MON-FRI *)'),
     });
-    rule.addTarget(new targets.SfnStateMachine(stateMachine));
+    rule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
 
+    this.exportValue(cfDistribution.domainName, { name: 'CloudFrontDomainName' });
   }
 }
