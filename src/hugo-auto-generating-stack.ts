@@ -14,12 +14,23 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as sfnTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
+interface HugoStackProps extends StackProps {
+  hugoConfig?: {
+    env?: string;
+    domainName?: string;
+  }
+}
+
 export class HugoStack extends Stack {
-  constructor(scope: Construct, id: string, props: StackProps = {}) {
+  constructor(scope: Construct, id: string, props: HugoStackProps = {}) {
     super(scope, id, props);
+
+    const hugoDomainName = props.hugoConfig?.domainName;
+    const hugoEnv = props.hugoConfig?.env;
 
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
+      eventBridgeEnabled: true,
     });
 
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
@@ -60,6 +71,7 @@ export class HugoStack extends Stack {
 
     const cfDistribution = new cf.Distribution(this, 'Distribution', {
       comment: 'Builder News',
+      domainNames: [],
       defaultBehavior: {
         origin: new S3Origin(bucket, { originPath: '/hugo/public' }),
         functionAssociations: [
@@ -84,6 +96,8 @@ export class HugoStack extends Stack {
       environmentVariables: {
         HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
         BUCKET_NAME: { value: bucket.bucketName },
+        HUGO_BASEURL: { value: `https://${hugoDomainName||cfDistribution.distributionDomainName}/` },
+        HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
@@ -147,11 +161,27 @@ export class HugoStack extends Stack {
       definition: createSummaryTask,
     });
 
-    const rule = new events.Rule(this, 'sampleRule', {
+    const scheduledHugoBuildRule = new events.Rule(this, 'ScheduledHugoBuild', {
       description: 'Create hugo contents every day',
       schedule: events.Schedule.expression('cron(59 7/8 ? * MON-FRI *)'),
     });
-    rule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
+    scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
+
+    const hugoConfigChanedRure = new events.Rule(this, 'HugoConfigChaned', {
+      eventPattern: {
+        source: ['aws.s3'],
+        detailType: ['Object Created'],
+        detail: {
+          bucket: {
+            name: [bucket.bucketName],
+          },
+          object: {
+            key: [{ prefix: 'hugo/config.' }],
+          }
+        }
+      }
+    });
+    hugoConfigChanedRure.addTarget(new targets.CodeBuildProject(buildProject));
 
     this.exportValue(cfDistribution.domainName, { name: 'CloudFrontDomainName' });
   }
