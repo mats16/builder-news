@@ -28,7 +28,8 @@ jobs:
         run: $(npm bin)/cdk deploy --require-approval never
         env:
           AWS_REGION: us-west-2
-          CUSTOM_DOMAIN_NAME: news.wktk.dev
+          CF_CNAME: news.wktk.dev
+          ACM_ARN: ${{ secrets.ACM_ARN }}
           HUGO_ENV: production
           HUGO_GOOGLEANALYTICS: ${{ secrets.HUGO_GOOGLEANALYTICS }}
           HUGO_DISQUSSHORTNAME: ${{ secrets.HUGO_DISQUSSHORTNAME }}

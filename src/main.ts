@@ -8,7 +8,8 @@ const env = {
 };
 
 const config = {
-  customDomainName: process.env.CUSTOM_DOMAIN_NAME,
+  cfCname: process.env.CF_CNAME,
+  acmArn: process.env.ACM_ARN,
   hugoEnv: process.env.HUGO_ENV,
   hugoGoogleAnalytics: process.env.HUGO_GOOGLEANALYTICS,
   hugoDisqusShortname: process.env.HUGO_DISQUSSHORTNAME,

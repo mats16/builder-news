@@ -106,7 +106,7 @@ interface Event {
 };
 
 export const handler: Handler = async (event: Event, _context) => {
-  const lang = event.lang || 'en';
+  const lang = event.lang || 'ja';
   const time: string|undefined = event.input?.time; // 2022-04-14T12:10:00Z
 
   const executedDate = (typeof time == 'string')
@@ -125,13 +125,18 @@ export const handler: Handler = async (event: Event, _context) => {
   };
 
   const contentDateString = oldestPubDate.toISOString().split('T')[0];
-  const contentTitle = `Daily AWS ${contentDateString}`;
+  const contentTitle = (lang == 'ja')
+    ? `日刊AWS ${contentDateString}`
+    : `Daily AWS ${contentDateString}`;
+  const contentdescription = (lang == 'ja')
+    ? 'AWS関連のニュースヘッドライン'
+    : 'AWS News Headlines';
   const contentObjectKey = `hugo/content/posts/daily-aws-${contentDateString}.${lang}.md`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
     title: contentTitle,
-    description: 'AWS News Headlines',
+    description: contentdescription,
     date: contentDateString,
     lastmod: executedDate.toISOString(),
     categories: [

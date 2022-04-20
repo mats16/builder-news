@@ -1,4 +1,5 @@
 import { Stack, StackProps, Duration } from 'aws-cdk-lib';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cf from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
@@ -16,7 +17,8 @@ import { Construct } from 'constructs';
 
 interface HugoStackProps extends StackProps {
   config: {
-    customDomainName?: string;
+    cfCname?: string;
+    acmArn?: string;
     hugoEnv?: string;
     hugoGoogleAnalytics?: string;
     hugoDisqusShortname?: string;
@@ -27,7 +29,7 @@ export class HugoStack extends Stack {
   constructor(scope: Construct, id: string, props: HugoStackProps = { config: {} }) {
     super(scope, id, props);
 
-    const { customDomainName, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
+    const { cfCname, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -72,7 +74,8 @@ export class HugoStack extends Stack {
 
     const cfDistribution = new cf.Distribution(this, 'Distribution', {
       comment: 'Builder News',
-      //domainNames: (typeof customDomainName == 'undefined') ? undefined : [customDomainName],
+      domainNames: (typeof cfCname == 'undefined') ? undefined : [cfCname],
+      certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
       defaultBehavior: {
         origin: new S3Origin(bucket, { originPath: '/hugo/public' }),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.HTTPS_ONLY,
@@ -95,13 +98,12 @@ export class HugoStack extends Stack {
       }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
-      //environmentVariables: buildEnv,
       environmentVariables: {
         HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
         BUCKET_NAME: { value: bucket.bucketName },
-        HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
+        HUGO_BASEURL: { value: `https://${cfCname||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-        HUGO_GOOGLEANALYTICS: { value: hugoGoogleAnalytics || ''  },
+        HUGO_GOOGLEANALYTICS: { value: hugoGoogleAnalytics || '' },
         HUGO_DISQUSSHORTNAME: { value: hugoDisqusShortname || '' },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -189,6 +191,6 @@ export class HugoStack extends Stack {
     });
     hugoConfigChanedRure.addTarget(new targets.CodeBuildProject(buildProject));
 
-    this.exportValue(cfDistribution.domainName, { name: 'CloudFrontDomainName' });
+    this.exportValue(`https://${cfCname||cfDistribution.distributionDomainName}/`, { name: 'Url' });
   }
 }
