@@ -72,9 +72,10 @@ export class HugoStack extends Stack {
 
     const cfDistribution = new cf.Distribution(this, 'Distribution', {
       comment: 'Builder News',
-      domainNames: [],
+      //domainNames: (typeof customDomainName == 'undefined') ? undefined : [customDomainName],
       defaultBehavior: {
         origin: new S3Origin(bucket, { originPath: '/hugo/public' }),
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.HTTPS_ONLY,
         functionAssociations: [
           {
             eventType: cf.FunctionEventType.VIEWER_REQUEST,
@@ -85,15 +86,6 @@ export class HugoStack extends Stack {
       defaultRootObject: 'index.html',
       errorResponses: [{ httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' }],
     });
-
-    //const buildEnv: { [name: string]: codebuild.BuildEnvironmentVariable } = {
-    //  HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
-    //  BUCKET_NAME: { value: bucket.bucketName },
-    //  HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
-    //  HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-    //};
-    //if (typeof hugoGoogleAnalytics == 'string') { buildEnv.HUGO_GOOGLEANALYTICS =  { value: hugoGoogleAnalytics } };
-    //if (typeof hugoDisqusShortname == 'string') { buildEnv.HUGO_DISQUSSHORTNAME =  { value: hugoDisqusShortname } };
 
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Hugo - Build static pages',
