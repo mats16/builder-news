@@ -96,6 +96,28 @@ Object {
       },
     },
   },
+  "Outputs": Object {
+    "ExportUrl": Object {
+      "Export": Object {
+        "Name": "Url",
+      },
+      "Value": Object {
+        "Fn::Join": Array [
+          "",
+          Array [
+            "https://",
+            Object {
+              "Fn::GetAtt": Array [
+                "Distribution830FAC52",
+                "DomainName",
+              ],
+            },
+            "/",
+          ],
+        ],
+      },
+    },
+  },
   "Parameters": Object {
     "BootstrapVersion": Object {
       "Default": "/cdk-bootstrap/hnb659fds/version",
@@ -125,6 +147,198 @@ Object {
       },
       "Type": "AWS::S3::Bucket",
       "UpdateReplacePolicy": "Retain",
+    },
+    "BucketNotifications8F2E257D": Object {
+      "Properties": Object {
+        "BucketName": Object {
+          "Ref": "Bucket83908E77",
+        },
+        "Managed": true,
+        "NotificationConfiguration": Object {
+          "EventBridgeConfiguration": Object {},
+        },
+        "ServiceToken": Object {
+          "Fn::GetAtt": Array [
+            "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "Custom::S3BucketNotifications",
+    },
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691": Object {
+      "DependsOn": Array [
+        "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36",
+        "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC",
+      ],
+      "Properties": Object {
+        "Code": Object {
+          "ZipFile": "import boto3  # type: ignore
+import json
+import logging
+import urllib.request
+
+s3 = boto3.client(\\"s3\\")
+
+EVENTBRIDGE_CONFIGURATION = 'EventBridgeConfiguration'
+
+CONFIGURATION_TYPES = [\\"TopicConfigurations\\", \\"QueueConfigurations\\", \\"LambdaFunctionConfigurations\\"]
+
+def handler(event: dict, context):
+  response_status = \\"SUCCESS\\"
+  error_message = \\"\\"
+  try:
+    props = event[\\"ResourceProperties\\"]
+    bucket = props[\\"BucketName\\"]
+    notification_configuration = props[\\"NotificationConfiguration\\"]
+    request_type = event[\\"RequestType\\"]
+    managed = props.get('Managed', 'true').lower() == 'true'
+    stack_id = event['StackId']
+
+    if managed:
+      config = handle_managed(request_type, notification_configuration)
+    else:
+      config = handle_unmanaged(bucket, stack_id, request_type, notification_configuration)
+
+    put_bucket_notification_configuration(bucket, config)
+  except Exception as e:
+    logging.exception(\\"Failed to put bucket notification configuration\\")
+    response_status = \\"FAILED\\"
+    error_message = f\\"Error: {str(e)}. \\"
+  finally:
+    submit_response(event, context, response_status, error_message)
+
+def handle_managed(request_type, notification_configuration):
+  if request_type == 'Delete':
+    return {}
+  return notification_configuration
+
+def handle_unmanaged(bucket, stack_id, request_type, notification_configuration):
+  external_notifications = find_external_notifications(bucket, stack_id)
+
+  if request_type == 'Delete':
+    return external_notifications
+
+  def with_id(notification):
+    notification['Id'] = f\\"{stack_id}-{hash(json.dumps(notification, sort_keys=True))}\\"
+    return notification
+
+  notifications = {}
+  for t in CONFIGURATION_TYPES:
+    external = external_notifications.get(t, [])
+    incoming = [with_id(n) for n in notification_configuration.get(t, [])]
+    notifications[t] = external + incoming
+
+  if EVENTBRIDGE_CONFIGURATION in notification_configuration:
+    notifications[EVENTBRIDGE_CONFIGURATION] = notification_configuration[EVENTBRIDGE_CONFIGURATION]
+  elif EVENTBRIDGE_CONFIGURATION in external_notifications:
+    notifications[EVENTBRIDGE_CONFIGURATION] = external_notifications[EVENTBRIDGE_CONFIGURATION]
+
+  return notifications
+
+def find_external_notifications(bucket, stack_id):
+  existing_notifications = get_bucket_notification_configuration(bucket)
+  external_notifications = {}
+  for t in CONFIGURATION_TYPES:
+    external_notifications[t] = [n for n in existing_notifications.get(t, []) if not n['Id'].startswith(f\\"{stack_id}-\\")]
+
+  if EVENTBRIDGE_CONFIGURATION in existing_notifications:
+    external_notifications[EVENTBRIDGE_CONFIGURATION] = existing_notifications[EVENTBRIDGE_CONFIGURATION]
+
+  return external_notifications
+
+def get_bucket_notification_configuration(bucket):
+  return s3.get_bucket_notification_configuration(Bucket=bucket)
+
+def put_bucket_notification_configuration(bucket, notification_configuration):
+  s3.put_bucket_notification_configuration(Bucket=bucket, NotificationConfiguration=notification_configuration)
+
+def submit_response(event: dict, context, response_status: str, error_message: str):
+  response_body = json.dumps(
+    {
+      \\"Status\\": response_status,
+      \\"Reason\\": f\\"{error_message}See the details in CloudWatch Log Stream: {context.log_stream_name}\\",
+      \\"PhysicalResourceId\\": event.get(\\"PhysicalResourceId\\") or event[\\"LogicalResourceId\\"],
+      \\"StackId\\": event[\\"StackId\\"],
+      \\"RequestId\\": event[\\"RequestId\\"],
+      \\"LogicalResourceId\\": event[\\"LogicalResourceId\\"],
+      \\"NoEcho\\": False,
+    }
+  ).encode(\\"utf-8\\")
+  headers = {\\"content-type\\": \\"\\", \\"content-length\\": str(len(response_body))}
+  try:
+    req = urllib.request.Request(url=event[\\"ResponseURL\\"], headers=headers, data=response_body, method=\\"PUT\\")
+    with urllib.request.urlopen(req) as response:
+      print(response.read().decode(\\"utf-8\\"))
+    print(\\"Status code: \\" + response.reason)
+  except Exception as e:
+      print(\\"send(..) failed executing request.urlopen(..): \\" + str(e))
+",
+        },
+        "Description": "AWS CloudFormation handler for \\"Custom::S3BucketNotifications\\" resources (@aws-cdk/aws-s3)",
+        "Handler": "index.handler",
+        "Role": Object {
+          "Fn::GetAtt": Array [
+            "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC",
+            "Arn",
+          ],
+        },
+        "Runtime": "python3.7",
+        "Timeout": 300,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": Array [
+          Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "arn:",
+                Object {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+              ],
+            ],
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "s3:PutBucketNotification",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36",
+        "Roles": Array [
+          Object {
+            "Ref": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
     },
     "BucketPolicyE9A3008A": Object {
       "Properties": Object {
@@ -191,11 +405,38 @@ Object {
               },
             },
             Object {
-              "Name": "DISTRIBUTION_ID",
+              "Name": "HUGO_BASEURL",
               "Type": "PLAINTEXT",
               "Value": Object {
-                "Ref": "Distribution830FAC52",
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "https://",
+                    Object {
+                      "Fn::GetAtt": Array [
+                        "Distribution830FAC52",
+                        "DomainName",
+                      ],
+                    },
+                    "/",
+                  ],
+                ],
               },
+            },
+            Object {
+              "Name": "HUGO_PARAMS_ENV",
+              "Type": "PLAINTEXT",
+              "Value": "development",
+            },
+            Object {
+              "Name": "HUGO_GOOGLEANALYTICS",
+              "Type": "PLAINTEXT",
+              "Value": "",
+            },
+            Object {
+              "Name": "HUGO_DISQUSSHORTNAME",
+              "Type": "PLAINTEXT",
+              "Value": "",
             },
           ],
           "Image": "aws/codebuild/standard:5.0",
@@ -239,6 +480,49 @@ Object {
         "TimeoutInMinutes": 10,
       },
       "Type": "AWS::CodeBuild::Project",
+    },
+    "BuildStaticPagesEventsRole9EC715D4": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "events.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "BuildStaticPagesEventsRoleDefaultPolicy74C2E5F5": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "codebuild:StartBuild",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "BuildStaticPages05E1D87F",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "BuildStaticPagesEventsRoleDefaultPolicy74C2E5F5",
+        "Roles": Array [
+          Object {
+            "Ref": "BuildStaticPagesEventsRole9EC715D4",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
     },
     "BuildStaticPagesRole2D55B063": Object {
       "Properties": Object {
@@ -458,236 +742,6 @@ Object {
       },
       "Type": "AWS::IAM::Policy",
     },
-    "CreateNewPosts8CDFBDB5": Object {
-      "DependsOn": Array [
-        "CreateNewPostsRoleDefaultPolicy593A5F9E",
-        "CreateNewPostsRoleE4A26589",
-      ],
-      "Properties": Object {
-        "DefinitionString": Object {
-          "Fn::Join": Array [
-            "",
-            Array [
-              "{\\"StartAt\\":\\"Create Summary\\",\\"States\\":{\\"Create Summary\\":{\\"Type\\":\\"Parallel\\",\\"Next\\":\\"Hugo Build\\",\\"Branches\\":[{\\"StartAt\\":\\"Create Summary EN\\",\\"States\\":{\\"Create Summary EN\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreateSummaryFunction917C2F11",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"en\\"}}}}},{\\"StartAt\\":\\"Create Summary JA\\",\\"States\\":{\\"Create Summary JA\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreateSummaryFunction917C2F11",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"ja\\"}}}}}]},\\"Hugo Build\\":{\\"Next\\":\\"Clear CDN Cache\\",\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::codebuild:startBuild.sync\\",\\"Parameters\\":{\\"ProjectName\\":\\"",
-              Object {
-                "Ref": "BuildStaticPages05E1D87F",
-              },
-              "\\"}},\\"Clear CDN Cache\\":{\\"End\\":true,\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::aws-sdk:cloudfront:createInvalidation\\",\\"Parameters\\":{\\"DistributionId\\":\\"",
-              Object {
-                "Ref": "Distribution830FAC52",
-              },
-              "\\",\\"InvalidationBatch\\":{\\"CallerReference.$\\":\\"$.SdkResponseMetadata.RequestId\\",\\"Paths\\":{\\"Items\\":[\\"/*\\"],\\"Quantity\\":1}}}}}}",
-            ],
-          ],
-        },
-        "RoleArn": Object {
-          "Fn::GetAtt": Array [
-            "CreateNewPostsRoleE4A26589",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "AWS::StepFunctions::StateMachine",
-    },
-    "CreateNewPostsEventsRoleDefaultPolicy81DCFC7B": Object {
-      "Properties": Object {
-        "PolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "states:StartExecution",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Ref": "CreateNewPosts8CDFBDB5",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "CreateNewPostsEventsRoleDefaultPolicy81DCFC7B",
-        "Roles": Array [
-          Object {
-            "Ref": "CreateNewPostsEventsRoleF6B477AA",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "CreateNewPostsEventsRoleF6B477AA": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": "events.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "CreateNewPostsRoleDefaultPolicy593A5F9E": Object {
-      "Properties": Object {
-        "PolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": Array [
-                "codebuild:StartBuild",
-                "codebuild:StopBuild",
-                "codebuild:BatchGetBuilds",
-                "codebuild:BatchGetReports",
-              ],
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::GetAtt": Array [
-                  "BuildStaticPages05E1D87F",
-                  "Arn",
-                ],
-              },
-            },
-            Object {
-              "Action": Array [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule",
-              ],
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    "arn:",
-                    Object {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":events:",
-                    Object {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":rule/StepFunctionsGetEventForCodeBuildStartBuildRule",
-                  ],
-                ],
-              },
-            },
-            Object {
-              "Action": "cloudfront:CreateInvalidation",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    "arn:aws:cloudfront::",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":distribution/",
-                    Object {
-                      "Ref": "Distribution830FAC52",
-                    },
-                  ],
-                ],
-              },
-            },
-            Object {
-              "Action": "lambda:InvokeFunction",
-              "Effect": "Allow",
-              "Resource": Array [
-                Object {
-                  "Fn::GetAtt": Array [
-                    "CreateSummaryFunction917C2F11",
-                    "Arn",
-                  ],
-                },
-                Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      Object {
-                        "Fn::GetAtt": Array [
-                          "CreateSummaryFunction917C2F11",
-                          "Arn",
-                        ],
-                      },
-                      ":*",
-                    ],
-                  ],
-                },
-              ],
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "CreateNewPostsRoleDefaultPolicy593A5F9E",
-        "Roles": Array [
-          Object {
-            "Ref": "CreateNewPostsRoleE4A26589",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "CreateNewPostsRoleE4A26589": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": Object {
-                  "Fn::FindInMap": Array [
-                    "ServiceprincipalMap",
-                    Object {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
     "CreateSummaryFunction917C2F11": Object {
       "DependsOn": Array [
         "CreateSummaryFunctionServiceRoleDefaultPolicy4FA02F7C",
@@ -701,7 +755,7 @@ Object {
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "650e6c9f2b23a553443c888942f7d754d6f28a0a1285f7a342fd04d0cbb25c3c.zip",
+          "S3Key": "cfeb7b271580f584d7ca984e7340111ca7f5955739527e2112cdd59c750fbb1a.zip",
         },
         "Description": "Create summary",
         "Environment": Object {
@@ -1013,7 +1067,7 @@ Object {
           },
         ],
         "SourceObjectKeys": Array [
-          "0c00141626ec220d2826f994b938fe15104684459d8be6ce0c6fdedb617cc76e.zip",
+          "97292a1745e65ac4067ad3284f3914a712865e74ce955638aa6a4bed1307b67b.zip",
         ],
       },
       "Type": "Custom::CDKBucketDeployment",
@@ -1025,7 +1079,7 @@ Object {
           "Comment": "Builder News",
           "CustomErrorResponses": Array [
             Object {
-              "ErrorCachingMinTTL": 60,
+              "ErrorCachingMinTTL": 86400,
               "ErrorCode": 404,
               "ResponseCode": 404,
               "ResponsePagePath": "/404.html",
@@ -1046,7 +1100,7 @@ Object {
               },
             ],
             "TargetOriginId": "testDistributionOrigin1F4407531",
-            "ViewerProtocolPolicy": "allow-all",
+            "ViewerProtocolPolicy": "https-only",
           },
           "DefaultRootObject": "index.html",
           "Enabled": true,
@@ -1088,6 +1142,283 @@ Object {
         },
       },
       "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+    },
+    "GenerateHugoContents0F46E156": Object {
+      "DependsOn": Array [
+        "GenerateHugoContentsRoleDefaultPolicyA34F0788",
+        "GenerateHugoContentsRole213F925E",
+      ],
+      "Properties": Object {
+        "DefinitionString": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "{\\"StartAt\\":\\"Create Summary\\",\\"States\\":{\\"Create Summary\\":{\\"Type\\":\\"Parallel\\",\\"Next\\":\\"Hugo Build\\",\\"Branches\\":[{\\"StartAt\\":\\"Create Summary EN\\",\\"States\\":{\\"Create Summary EN\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
+              Object {
+                "Fn::GetAtt": Array [
+                  "CreateSummaryFunction917C2F11",
+                  "Arn",
+                ],
+              },
+              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"en\\"}}}}},{\\"StartAt\\":\\"Create Summary JA\\",\\"States\\":{\\"Create Summary JA\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
+              Object {
+                "Fn::GetAtt": Array [
+                  "CreateSummaryFunction917C2F11",
+                  "Arn",
+                ],
+              },
+              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"ja\\"}}}}}]},\\"Hugo Build\\":{\\"Next\\":\\"Clear CDN Cache\\",\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::codebuild:startBuild.sync\\",\\"Parameters\\":{\\"ProjectName\\":\\"",
+              Object {
+                "Ref": "BuildStaticPages05E1D87F",
+              },
+              "\\"}},\\"Clear CDN Cache\\":{\\"End\\":true,\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::aws-sdk:cloudfront:createInvalidation\\",\\"Parameters\\":{\\"DistributionId\\":\\"",
+              Object {
+                "Ref": "Distribution830FAC52",
+              },
+              "\\",\\"InvalidationBatch\\":{\\"CallerReference.$\\":\\"$.SdkResponseMetadata.RequestId\\",\\"Paths\\":{\\"Items\\":[\\"/*\\"],\\"Quantity\\":1}}}}}}",
+            ],
+          ],
+        },
+        "RoleArn": Object {
+          "Fn::GetAtt": Array [
+            "GenerateHugoContentsRole213F925E",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::StepFunctions::StateMachine",
+    },
+    "GenerateHugoContentsEventsRoleC59E070E": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "events.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "GenerateHugoContentsEventsRoleDefaultPolicy137409D5": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Ref": "GenerateHugoContents0F46E156",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "GenerateHugoContentsEventsRoleDefaultPolicy137409D5",
+        "Roles": Array [
+          Object {
+            "Ref": "GenerateHugoContentsEventsRoleC59E070E",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "GenerateHugoContentsRole213F925E": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": Object {
+                  "Fn::FindInMap": Array [
+                    "ServiceprincipalMap",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    "states",
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "GenerateHugoContentsRoleDefaultPolicyA34F0788": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "codebuild:StartBuild",
+                "codebuild:StopBuild",
+                "codebuild:BatchGetBuilds",
+                "codebuild:BatchGetReports",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "BuildStaticPages05E1D87F",
+                  "Arn",
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":events:",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":rule/StepFunctionsGetEventForCodeBuildStartBuildRule",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": "cloudfront:CreateInvalidation",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:aws:cloudfront::",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":distribution/",
+                    Object {
+                      "Ref": "Distribution830FAC52",
+                    },
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "CreateSummaryFunction917C2F11",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "CreateSummaryFunction917C2F11",
+                          "Arn",
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "GenerateHugoContentsRoleDefaultPolicyA34F0788",
+        "Roles": Array [
+          Object {
+            "Ref": "GenerateHugoContentsRole213F925E",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "HugoConfigChaned1FD65576": Object {
+      "Properties": Object {
+        "EventPattern": Object {
+          "detail": Object {
+            "bucket": Object {
+              "name": Array [
+                Object {
+                  "Ref": "Bucket83908E77",
+                },
+              ],
+            },
+            "object": Object {
+              "key": Array [
+                Object {
+                  "prefix": "hugo/config.",
+                },
+              ],
+            },
+          },
+          "detail-type": Array [
+            "Object Created",
+          ],
+          "source": Array [
+            "aws.s3",
+          ],
+        },
+        "State": "ENABLED",
+        "Targets": Array [
+          Object {
+            "Arn": Object {
+              "Fn::GetAtt": Array [
+                "BuildStaticPages05E1D87F",
+                "Arn",
+              ],
+            },
+            "Id": "Target0",
+            "RoleArn": Object {
+              "Fn::GetAtt": Array [
+                "BuildStaticPagesEventsRole9EC715D4",
+                "Arn",
+              ],
+            },
+          },
+        ],
+      },
+      "Type": "AWS::Events::Rule",
     },
     "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": Object {
       "DependsOn": Array [
@@ -1167,6 +1498,28 @@ Object {
       },
       "Type": "AWS::IAM::Policy",
     },
+    "ScheduledHugoBuild0463AADF": Object {
+      "Properties": Object {
+        "Description": "Create hugo contents every day",
+        "ScheduleExpression": "cron(59 21,23 ? * MON-FRI *)",
+        "State": "ENABLED",
+        "Targets": Array [
+          Object {
+            "Arn": Object {
+              "Ref": "GenerateHugoContents0F46E156",
+            },
+            "Id": "Target0",
+            "RoleArn": Object {
+              "Fn::GetAtt": Array [
+                "GenerateHugoContentsEventsRoleC59E070E",
+                "Arn",
+              ],
+            },
+          },
+        ],
+      },
+      "Type": "AWS::Events::Rule",
+    },
     "UrlRewriteFunction9ABF1F87": Object {
       "Properties": Object {
         "AutoPublish": true,
@@ -1212,28 +1565,6 @@ Object {
         },
       },
       "Type": "AWS::CloudFront::Function",
-    },
-    "sampleRule0DFCE8EA": Object {
-      "Properties": Object {
-        "Description": "Create hugo contents every day",
-        "ScheduleExpression": "cron(59 7/8 ? * MON-FRI *)",
-        "State": "ENABLED",
-        "Targets": Array [
-          Object {
-            "Arn": Object {
-              "Ref": "CreateNewPosts8CDFBDB5",
-            },
-            "Id": "Target0",
-            "RoleArn": Object {
-              "Fn::GetAtt": Array [
-                "CreateNewPostsEventsRoleF6B477AA",
-                "Arn",
-              ],
-            },
-          },
-        ],
-      },
-      "Type": "AWS::Events::Rule",
     },
   },
   "Rules": Object {

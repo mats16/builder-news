@@ -22,7 +22,7 @@ interface HugoStackProps extends StackProps {
     hugoEnv?: string;
     hugoGoogleAnalytics?: string;
     hugoDisqusShortname?: string;
-  }
+  };
 }
 
 export class HugoStack extends Stack {
@@ -185,9 +185,9 @@ export class HugoStack extends Stack {
           },
           object: {
             key: [{ prefix: 'hugo/config.' }],
-          }
-        }
-      }
+          },
+        },
+      },
     });
     hugoConfigChanedRure.addTarget(new targets.CodeBuildProject(buildProject));
 

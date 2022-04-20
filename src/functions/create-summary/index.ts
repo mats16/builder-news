@@ -71,14 +71,14 @@ const dataSource = {
     },
     {
       name: 'Karpenter',
-      url: 'https://github.com/aws/karpenter/'
+      url: 'https://github.com/aws/karpenter/',
     },
     {
       name: 'Amazon EKS Anywhere',
-      url: 'https://github.com/aws/eks-anywhere/'
+      url: 'https://github.com/aws/eks-anywhere/',
     },
-  ]
-}
+  ],
+};
 
 const translate = async (text: string, sourceLanguageCode: string, targetLanguageCode: string) => {
   const client = new TranslateClient({});
@@ -140,7 +140,7 @@ export const handler: Handler = async (event: Event, _context) => {
     date: contentDateString,
     lastmod: executedDate.toISOString(),
     categories: [
-      'aws'
+      'aws',
     ],
   };
 
@@ -186,7 +186,7 @@ export const handler: Handler = async (event: Event, _context) => {
       };
       for await (let item of items) {
         let { title, link } = item;
-        if (lang != 'ja') { title = await translate(title!, 'ja', lang) };
+        if (lang != 'ja') { title = await translate(title!, 'ja', lang); };
         mdBody.text(`1. [${title}](${link})`).newline();
       };
     };
@@ -219,7 +219,7 @@ export const handler: Handler = async (event: Event, _context) => {
       };
       for await (let item of items) {
         let { title, link } = item;
-        if (lang != 'ja') { title = await translate(title!, 'ja', lang) };
+        if (lang != 'ja') { title = await translate(title!, 'ja', lang); };
         mdBody.text(`- [${title}](${link})`).newline();
       };
     };
