@@ -25,7 +25,7 @@ jobs:
         run: yarn install && npx projen build
       - name: Deploy
         id: deploy
-        run: $(npm bin)/cdk deploy
+        run: $(npm bin)/cdk deploy --require-approval never
         env:
           AWS_REGION: us-west-2
           CUSTOM_DOMAIN_NAME: news.wktk.dev
