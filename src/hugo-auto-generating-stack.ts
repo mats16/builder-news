@@ -15,18 +15,19 @@ import * as sfnTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
 interface HugoStackProps extends StackProps {
-  hugoConfig?: {
-    env?: string;
-    domainName?: string;
+  config: {
+    customDomainName?: string;
+    hugoEnv?: string;
+    hugoGoogleAnalytics?: string;
+    hugoDisqusShortname?: string;
   }
 }
 
 export class HugoStack extends Stack {
-  constructor(scope: Construct, id: string, props: HugoStackProps = {}) {
+  constructor(scope: Construct, id: string, props: HugoStackProps = { config: {} }) {
     super(scope, id, props);
 
-    const hugoDomainName = props.hugoConfig?.domainName;
-    const hugoEnv = props.hugoConfig?.env;
+    const { customDomainName, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -85,6 +86,15 @@ export class HugoStack extends Stack {
       errorResponses: [{ httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' }],
     });
 
+    //const buildEnv: { [name: string]: codebuild.BuildEnvironmentVariable } = {
+    //  HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
+    //  BUCKET_NAME: { value: bucket.bucketName },
+    //  HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
+    //  HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
+    //};
+    //if (typeof hugoGoogleAnalytics == 'string') { buildEnv.HUGO_GOOGLEANALYTICS =  { value: hugoGoogleAnalytics } };
+    //if (typeof hugoDisqusShortname == 'string') { buildEnv.HUGO_DISQUSSHORTNAME =  { value: hugoDisqusShortname } };
+
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Hugo - Build static pages',
       source: codebuild.Source.s3({
@@ -93,11 +103,14 @@ export class HugoStack extends Stack {
       }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
+      //environmentVariables: buildEnv,
       environmentVariables: {
         HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
         BUCKET_NAME: { value: bucket.bucketName },
-        HUGO_BASEURL: { value: `https://${hugoDomainName||cfDistribution.distributionDomainName}/` },
+        HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
+        HUGO_GOOGLEANALYTICS: { value: hugoGoogleAnalytics || ''  },
+        HUGO_DISQUSSHORTNAME: { value: hugoDisqusShortname || '' },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
@@ -163,7 +176,8 @@ export class HugoStack extends Stack {
 
     const scheduledHugoBuildRule = new events.Rule(this, 'ScheduledHugoBuild', {
       description: 'Create hugo contents every day',
-      schedule: events.Schedule.expression('cron(59 7/8 ? * MON-FRI *)'),
+      schedule: events.Schedule.expression('cron(59 21,23 ? * MON-FRI *)'),
+      //schedule: events.Schedule.expression('cron(59 * ? * MON-FRI *)'),
     });
     scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
 

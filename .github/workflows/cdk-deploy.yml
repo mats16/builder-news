@@ -1,0 +1,33 @@
+name: CDK deploy
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  cdk_deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # needed to interact with GitHub's OIDC Token endpoint.
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+      - name: Build
+        id: build
+        run: yarn install && npx projen build
+      - name: Deploy
+        id: deploy
+        run: $(npm bin)/cdk deploy
+        env:
+          CUSTOM_DOMAIN_NAME: news.wktk.dev
+          HUGO_ENV: production
+          HUGO_GOOGLEANALYTICS: ${{ secrets.HUGO_GOOGLEANALYTICS }}
+          HUGO_DISQUSSHORTNAME: ${{ secrets.HUGO_DISQUSSHORTNAME }}

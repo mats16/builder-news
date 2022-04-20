@@ -16,6 +16,70 @@ const bucketName = process.env.BUCKET_NAME!;
 const parser = new Parser();
 const s3 = new S3Client({});
 
+const dataSource = {
+  jpBlogs: [
+    {
+      name: 'AWS Japan Blog (Japanese)',
+      url: 'https://aws.amazon.com/jp/blogs/news/',
+    },
+    {
+      name: 'AWS Japan Startup Blog (Japanese)',
+      url: 'https://aws.amazon.com/jp/blogs/startup/',
+    },
+  ],
+  blogs: [
+    {
+      url: 'https://aws.amazon.com/blogs/aws/',
+    },
+    {
+      url: 'https://aws.amazon.com/blogs/startups/',
+    },
+    {
+      url: 'https://aws.amazon.com/blogs/architecture/',
+    },
+    {
+      url: 'https://aws.amazon.com/blogs/security/',
+    },
+    {
+      url: 'https://aws.amazon.com/blogs/opensource/',
+    },
+  ],
+  oss: [
+    {
+      name: 'AWS CDK',
+      url: 'https://github.com/aws/aws-cdk/',
+    },
+    {
+      name: 'OpenSearch',
+      url: 'https://github.com/opensearch-project/OpenSearch/',
+    },
+    {
+      name: 'Amazon Chime SDK for JavaScript',
+      url: 'https://github.com/aws/amazon-chime-sdk-js/',
+    },
+    {
+      name: 'AWS Copilot CLI',
+      url: 'https://github.com/aws/copilot-cli/',
+    },
+    {
+      name: 'Bottlerocket OS',
+      url: 'https://github.com/bottlerocket-os/bottlerocket/',
+    },
+    {
+      name: 'AWS Load Balancer Controller',
+      url: 'https://github.com/kubernetes-sigs/aws-load-balancer-controller/',
+    },
+    {
+      name: 'Karpenter',
+      url: 'https://github.com/aws/karpenter/'
+    },
+    {
+      name: 'Amazon EKS Anywhere',
+      url: 'https://github.com/aws/eks-anywhere'
+    },
+  ]
+}
+
 const translate = async (text: string, sourceLanguageCode: string, targetLanguageCode: string) => {
   const client = new TranslateClient({});
   const cmd = new TranslateTextCommand({
@@ -60,20 +124,27 @@ export const handler: Handler = async (event: Event, _context) => {
     oldestPubDate.setDate(latestPubDate.getDate() - 1);
   };
 
-  const summaryDateString = oldestPubDate.toISOString().split('T')[0];
-  const summaryTitle = `${summaryDateString} AWS Updates`;
-  const summaryObjectKey = `hugo/content/posts/${summaryDateString}.${lang}.md`;
+  const contentDateString = oldestPubDate.toISOString().split('T')[0];
+  const contentTitle = `Daily AWS ${contentDateString}`;
+  const contentObjectKey = `hugo/content/posts/daily-aws-${contentDateString}.${lang}.md`;
+
+  // https://gohugo.io/content-management/front-matter/
+  const frontMatter = {
+    title: contentTitle,
+    description: 'AWS News Headlines',
+    date: contentDateString,
+    lastmod: executedDate.toISOString(),
+    categories: [
+      'aws'
+    ],
+  };
 
   const mdBody = markdown.newBuilder()
     .headerOrdered(false)
-    .text('---').newline()
-    .text( `date: ${executedDate.toISOString()}`).newline()
-    .text( `title: ${summaryTitle}`).newline()
-    .text('categories:')
-    .list(['aws'])
-    .text('---').newline();
+    .text(JSON.stringify(frontMatter))
+    .newline();
 
-  mdBody.text(`${oldestPubDate.toUTCString()} ~ ${executedDate.toUTCString()}`).newline();
+  mdBody.text(`${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`).newline();
 
   await (async() => {
     const siteName ='What\'s New with AWS?';
@@ -83,12 +154,14 @@ export const handler: Handler = async (event: Event, _context) => {
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
       for await (let item of items) {
-        let { title, link, contentSnippet } = item;
-        if (lang != 'en') {
-          contentSnippet = await translate(contentSnippet!, 'en', lang);
-        };
+        const { title, link, contentSnippet } = item;
         mdBody.h4(`[${title}](${link})`);
-        mdBody.blockQuote(contentSnippet!);
+        if (lang == 'en') {
+          mdBody.blockQuote(contentSnippet!);
+        } else {
+          const translatedContentSnippet = await translate(contentSnippet!, 'en', lang);
+          mdBody.blockQuote(translatedContentSnippet);
+        };
       };
     } else {
       mdBody.text('No updates.').newline();
@@ -97,143 +170,75 @@ export const handler: Handler = async (event: Event, _context) => {
 
   mdBody.h2('Blogs');
 
+  for await (let blog of dataSource.jpBlogs) {
+    const feedUrl = blog.url + 'feed';
+    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (items.length > 0) {
+      if (lang == 'ja') {
+        mdBody.h3(`[${siteTitle}](${blog.url})`);
+      } else {
+        mdBody.h3(`[${blog.name}](${blog.url})`);
+      };
+      for await (let item of items) {
+        let { title, link } = item;
+        if (lang != 'ja') { title = await translate(title!, 'ja', lang) };
+        mdBody.text(`1. [${title}](${link})`).newline();
+      };
+    };
+  };
+
+  for await (let blog of dataSource.blogs) {
+    const feedUrl = blog.url + 'feed';
+    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (items.length > 0) {
+      mdBody.h3(`[${siteTitle}](${blog.url})`);
+      for await (let item of items) {
+        const { title, link } = item;
+        mdBody.text(`1. [${title}](${link})`).newline();
+      };
+    };
+  };
+
+  mdBody.h2('Videos');
+
   await (async() => {
-    const feedUrl = 'https://aws.amazon.com/jp/blogs/news/feed/';
-    const { title: siteTitle, link: siteLink, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    const siteTitle ='AWS Black Belt Online Seminar';
+    const siteLink = 'https://www.youtube.com/playlist?list=PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY';
+    const feedUrl = 'https://www.youtube.com/feeds/videos.xml?playlist_id=PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY';
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
       if (lang == 'ja') {
         mdBody.h3(`[${siteTitle}](${siteLink})`);
       } else {
-        mdBody.h3(`[AWS Japan Blog (Japanese)](${siteLink})`);
+        mdBody.h3(`[${siteTitle} (Japanese)](${siteLink})`);
       };
       for await (let item of items) {
         let { title, link } = item;
-        if (lang != 'ja') {
-          title = await translate(title!, 'ja', lang);
-        };
-        mdBody.text(`1. [${title}](${link})\n`);
-      };
-    };
-  })();
-
-  await (async() => {
-    const feedUrl = 'https://aws.amazon.com/jp/blogs/startup/feed/';
-    const { title: siteTitle, link: siteLink, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      if (lang == 'ja') {
-        mdBody.h3(`[${siteTitle}](${siteLink})`);
-      } else {
-        mdBody.h3(`[AWS Japan Startup Blog (Japanese)](${siteLink})`);
-      };
-      for await (let item of items) {
-        let { title, link } = item;
-        if (lang != 'ja') {
-          title = await translate(title!, 'ja', lang);
-        };
-        mdBody.text(`1. [${title}](${link})`).newline();
-      };
-    };
-  })();
-
-  await (async() => {
-    const feedUrl = 'https://aws.amazon.com/blogs/aws/feed/';
-    const { title: siteTitle, link: siteLink, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteTitle}](${siteLink})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`1. [${title}](${link})`).newline();
-      };
-    };
-  })();
-
-  await (async() => {
-    const feedUrl = 'https://aws.amazon.com/blogs/startups/feed/';
-    const { title: siteTitle, link: siteLink, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteTitle}](${siteLink})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`1. [${title}](${link})`).newline();
-      };
-    };
-  })();
-
-  await (async() => {
-    const feedUrl = 'https://aws.amazon.com/blogs/opensource/feed/';
-    const { title: siteTitle, link: siteLink, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteTitle}](${siteLink})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`1. [${title}](${link})`).newline();
+        if (lang != 'ja') { title = await translate(title!, 'ja', lang) };
+        mdBody.text(`- [${title}](${link})`).newline();
       };
     };
   })();
 
   mdBody.h2('Open Source Releases');
 
-  await (async() => {
-    const siteName ='AWS CDK';
-    const siteUrl = 'https://github.com/aws/aws-cdk/';
-    const feedUrl = 'https://github.com/aws/aws-cdk/releases.atom';
+  for await (let oss of dataSource.oss) {
+    const feedUrl = oss.url + 'releases.atom';
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
-      mdBody.h3(`[${siteName}](${siteUrl})`);
+      mdBody.h3(`[${oss.name}](${oss.url})`);
       for await (let item of items) {
-        let { title, link } = item;
+        const { title, link } = item;
         mdBody.text(`- [${title}](${link})`).newline();
       };
     };
-  })();
-
-  await (async() => {
-    const siteName ='AWS Amplify CLI';
-    const siteUrl = 'https://github.com/aws-amplify/amplify-cli/';
-    const feedUrl = 'https://github.com/aws-amplify/amplify-cli/releases.atom';
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteName}](${siteUrl})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  })();
-
-  await (async() => {
-    const siteName ='AWS Copilot CLI';
-    const siteUrl = 'https://github.com/aws/copilot-cli/';
-    const feedUrl = 'https://github.com/aws/copilot-cli/releases.atom';
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteName}](${siteUrl})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  })();
-
-  await (async() => {
-    const siteName ='Bottlerocket OS';
-    const siteUrl = 'https://github.com/bottlerocket-os/bottlerocket/';
-    const feedUrl = 'https://github.com/bottlerocket-os/bottlerocket/releases.atom';
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteName}](${siteUrl})`);
-      for await (let item of items) {
-        let { title, link } = item;
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  })();
+  };
 
   await s3.send(new PutObjectCommand({
     Bucket: bucketName,
-    Key: summaryObjectKey,
+    Key: contentObjectKey,
     Body: mdBody.toMarkdown(),
   }));
 
-  return { bucket: bucketName, key: summaryObjectKey };
+  return { bucket: bucketName, key: contentObjectKey };
 };

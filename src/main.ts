@@ -7,14 +7,15 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION,
 };
 
-const hugoConfig = {
-  domainName: process.env.HUGO_DOMAIN_NAME,
-  env: process.env.HUGO_ENV,
+const config = {
+  customDomainName: process.env.CUSTOM_DOMAIN_NAME,
+  hugoEnv: process.env.HUGO_ENV,
+  hugoGoogleAnalytics: process.env.HUGO_GOOGLEANALYTICS,
+  hugoDisqusShortname: process.env.HUGO_DISQUSSHORTNAME,
 };
 
 const app = new App();
 
-new HugoStack(app, 'builder-news-dev', { env, hugoConfig });
-// new MyStack(app, 'rss-sumally-prod', { env: prodEnv });
+new HugoStack(app, 'builder-news-stack', { env, config });
 
 app.synth();

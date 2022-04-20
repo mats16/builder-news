@@ -1,5 +1,5 @@
-baseURL: https://news.wktk.dev/
 title: Builder News
+paginate: 5
 theme: PaperMod
 
 hasCJKLanguage: true
@@ -8,7 +8,10 @@ defaultContentLanguage: en
 languages:
   en:
     languageName: English
-    weight: 2
-  ja:
-    languageName: Japanese
     weight: 1
+  ja:
+    languageName: 日本語
+    weight: 2
+
+params:
+  comments: true
