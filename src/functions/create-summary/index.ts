@@ -171,7 +171,7 @@ export const handler: Handler = async (event: Event, _context) => {
   mdBody.h2('Blogs');
 
   for await (let blog of dataSource.jpBlogs) {
-    const feedUrl = blog.url + 'feed';
+    const feedUrl = blog.url + 'feed/';
     const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
       if (lang == 'ja') {
@@ -188,7 +188,7 @@ export const handler: Handler = async (event: Event, _context) => {
   };
 
   for await (let blog of dataSource.blogs) {
-    const feedUrl = blog.url + 'feed';
+    const feedUrl = blog.url + 'feed/';
     const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
       mdBody.h3(`[${siteTitle}](${blog.url})`);
