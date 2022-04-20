@@ -75,7 +75,7 @@ const dataSource = {
     },
     {
       name: 'Amazon EKS Anywhere',
-      url: 'https://github.com/aws/eks-anywhere'
+      url: 'https://github.com/aws/eks-anywhere/'
     },
   ]
 }
