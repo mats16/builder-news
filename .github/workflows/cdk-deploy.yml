@@ -27,6 +27,7 @@ jobs:
         id: deploy
         run: $(npm bin)/cdk deploy
         env:
+          AWS_REGION: us-west-2
           CUSTOM_DOMAIN_NAME: news.wktk.dev
           HUGO_ENV: production
           HUGO_GOOGLEANALYTICS: ${{ secrets.HUGO_GOOGLEANALYTICS }}
