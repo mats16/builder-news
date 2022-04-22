@@ -169,7 +169,7 @@ export const handler: Handler = async (event: Event, _context) => {
     .text(JSON.stringify(frontMatter))
     .newline();
 
-  mdBody.text(`${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`).newline();
+  //mdBody.text(`${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`).newline();
 
   await (async() => {
     const siteTitle = (lang == 'ja') ? '最近の発表' : 'Recent Announcements';
