@@ -14,4 +14,7 @@ languages:
     weight: 1
 
 params:
+  #ShowShareButtons: true
+  ShowToc: true
+  ShowPostNavLinks: true
   comments: true

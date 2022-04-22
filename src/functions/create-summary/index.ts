@@ -17,66 +17,86 @@ const parser = new Parser();
 const s3 = new S3Client({});
 
 const dataSource = {
-  jpBlogs: [
+  youtube: {
+    playlists: [
+      {
+        id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
+        name: {
+          ja: 'AWS Black Belt Online Seminar (日本語)',
+          en: 'AWS Black Belt Online Seminar (Japanese)',
+        } }
+    ]
+  },
+  awsJapanBlogs: [
     {
-      name: 'AWS Japan Blog (Japanese)',
-      url: 'https://aws.amazon.com/jp/blogs/news/',
+      category: 'news',
+      name: {
+        ja: 'Amazon Web Services ブログ (日本語)',
+        en: 'AWS Japan Blog (Japanese)',
+      },
     },
     {
-      name: 'AWS Japan Startup Blog (Japanese)',
-      url: 'https://aws.amazon.com/jp/blogs/startup/',
+      category: 'startup',
+      name: {
+        ja: 'AWS Startup ブログ (日本語)',
+        en: 'AWS Japan Startup Blog (Japanese)',
+      },
     },
   ],
-  blogs: [
-    {
-      url: 'https://aws.amazon.com/blogs/aws/',
-    },
-    {
-      url: 'https://aws.amazon.com/blogs/startups/',
-    },
-    {
-      url: 'https://aws.amazon.com/blogs/architecture/',
-    },
-    {
-      url: 'https://aws.amazon.com/blogs/security/',
-    },
-    {
-      url: 'https://aws.amazon.com/blogs/opensource/',
-    },
+  awsBlogs: [
+    { category: 'aws' }, // AWS News Blog
+    { category: 'startups' },
+    { category: 'opensource' },
+    { category: 'architecture' },
+    { category: 'aws-cloud-financial-management' },
+    { category: 'mt' }, // AWS Cloud Operations & Migrations Blog
+    //{ category: 'apn' }, // AWS Partner Network (APN) Blog
+    //{ category: 'awsmarketplace' },
+    { category: 'big-data' },
+    { category: 'business-productivity' },
+    { category: 'compute' },
+    { category: 'contact-center' },
+    { category: 'containers' },
+    { category: 'database' },
+    { category: 'desktop-and-application-streaming' },
+    { category: 'developer' }, // AWS Developer Tools Blog
+    { category: 'devops' },
+    //{ category: 'enterprise-strategy' },
+    { category: 'mobile' }, // Front-End Web & Mobile
+    //{ category: 'gametech' },
+    { category: 'hpc' },
+    { category: 'infrastructure-and-automation' },
+    { category: 'industries' },
+    { category: 'iot' },
+    { category: 'machine-learning' },
+    { category: 'media' },
+    { category: 'messaging-and-targeting' },
+    { category: 'networking-and-content-delivery' },
+    //{ category: 'publicsector' },
+    { category: 'quantum-computing' },
+    { category: 'robotics' },
+    //{ category: 'awsforsap' }, // SAP
+    { category: 'security' },
+    { category: 'storage' },
+    //{ category: 'training-and-certification' },
+    //{ category: 'modernizing-with-aws' }, // Windows on AWS
   ],
-  oss: [
-    {
-      name: 'AWS CDK',
-      url: 'https://github.com/aws/aws-cdk/',
-    },
-    {
-      name: 'OpenSearch',
-      url: 'https://github.com/opensearch-project/OpenSearch/',
-    },
-    {
-      name: 'Amazon Chime SDK for JavaScript',
-      url: 'https://github.com/aws/amazon-chime-sdk-js/',
-    },
-    {
-      name: 'AWS Copilot CLI',
-      url: 'https://github.com/aws/copilot-cli/',
-    },
-    {
-      name: 'Bottlerocket OS',
-      url: 'https://github.com/bottlerocket-os/bottlerocket/',
-    },
-    {
-      name: 'AWS Load Balancer Controller',
-      url: 'https://github.com/kubernetes-sigs/aws-load-balancer-controller/',
-    },
-    {
-      name: 'Karpenter',
-      url: 'https://github.com/aws/karpenter/',
-    },
-    {
-      name: 'Amazon EKS Anywhere',
-      url: 'https://github.com/aws/eks-anywhere/',
-    },
+  githubRepos: [
+    { title: 'AWS CDK', name: 'aws/aws-cdk' },
+    //{ title: 'AWS Amplify CLI', name: 'aws-amplify/amplify-cli' },
+    { title: 'Amplify for JavaScript', name: 'aws-amplify/amplify-js' },
+    { title: 'Amplify for iOS', name: 'aws-amplify/amplify-ios' },
+    { title: 'Amplify for Android', name: 'aws-amplify/amplify-android' },
+    { title: 'Amplify for Flutter', name: 'aws-amplify/amplify-flutter' },
+    { title: 'Amplify UI', name: 'aws-amplify/amplify-ui' },
+    { title: 'OpenSearch', name: 'opensearch-project/OpenSearch' },
+    { title: 'Amazon Chime SDK for JavaScript', name: 'aws/amazon-chime-sdk-js' },
+    { title: 'AWS Copilot CLI', name: 'aws/copilot-cli' },
+    { title: 'Firecracker', name: 'firecracker-microvm/firecracker' },
+    { title: 'Bottlerocket OS', name: 'bottlerocket-os/bottlerocket' },
+    { title: 'AWS Load Balancer Controller', name: 'kubernetes-sigs/aws-load-balancer-controller' },
+    { title: 'Karpenter', name: 'aws/karpenter' },
+    { title: 'Amazon EKS Anywhere', name: 'aws/eks-anywhere' },
   ],
 };
 
@@ -152,15 +172,15 @@ export const handler: Handler = async (event: Event, _context) => {
   mdBody.text(`${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`).newline();
 
   await (async() => {
-    const siteName ='What\'s New with AWS?';
-    const siteUrl = 'https://aws.amazon.com/new/';
+    const siteTitle = (lang == 'ja') ? '最近の発表' : 'Recent Announcements';
+    //const siteUrl = 'https://aws.amazon.com/new/';
     const feedUrl = 'https://aws.amazon.com/new/feed/';
-    mdBody.h2(`[${siteName}](${siteUrl})`);
+    mdBody.h3(siteTitle);
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
       for await (let item of items) {
         const { title, link, contentSnippet } = item;
-        mdBody.h4(`[${title}](${link})`);
+        mdBody.bold(`[${title}](${link})`).newline();
         if (lang == 'en') {
           mdBody.blockQuote(contentSnippet!);
         } else {
@@ -173,65 +193,66 @@ export const handler: Handler = async (event: Event, _context) => {
     };
   })();
 
-  mdBody.h2('Blogs');
-
-  for await (let blog of dataSource.jpBlogs) {
-    const feedUrl = blog.url + 'feed/';
-    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      if (lang == 'ja') {
-        mdBody.h3(`[${siteTitle}](${blog.url})`);
-      } else {
-        mdBody.h3(`[${blog.name}](${blog.url})`);
-      };
-      for await (let item of items) {
-        let { title, link } = item;
-        if (lang != 'ja') { title = await translate(title!, 'ja', lang); };
-        mdBody.text(`1. [${title}](${link})`).newline();
-      };
-    };
-  };
-
-  for await (let blog of dataSource.blogs) {
-    const feedUrl = blog.url + 'feed/';
-    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h3(`[${siteTitle}](${blog.url})`);
-      for await (let item of items) {
-        const { title, link } = item;
-        mdBody.text(`1. [${title}](${link})`).newline();
-      };
-    };
-  };
-
-  mdBody.h2('Videos');
-
-  await (async() => {
-    const siteTitle ='AWS Black Belt Online Seminar';
-    const siteLink = 'https://www.youtube.com/playlist?list=PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY';
-    const feedUrl = 'https://www.youtube.com/feeds/videos.xml?playlist_id=PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY';
+  let hasVideoHeader = false;
+  for await (let playlist of dataSource.youtube.playlists) {
+    const siteTitle = (lang == 'ja') ? playlist.name.ja : playlist.name.en;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlist.id}`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
-      if (lang == 'ja') {
-        mdBody.h3(`[${siteTitle}](${siteLink})`);
-      } else {
-        mdBody.h3(`[${siteTitle} (Japanese)](${siteLink})`);
+      if (!hasVideoHeader) {
+        mdBody.h3('Video');
+        hasVideoHeader = true;
       };
+      mdBody.h4(siteTitle);
       for await (let item of items) {
         let { title, link } = item;
         if (lang != 'ja') { title = await translate(title!, 'ja', lang); };
         mdBody.text(`- [${title}](${link})`).newline();
       };
     };
-  })();
+  };
 
-  mdBody.h2('Open Source Releases');
+  mdBody.h3('AWS Blogs');
 
-  for await (let oss of dataSource.oss) {
-    const feedUrl = oss.url + 'releases.atom';
+  for await (let blog of dataSource.awsJapanBlogs) {
+    const siteTitle = (lang == 'ja') ? blog.name.ja : blog.name.en;
+    const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
-      mdBody.h3(`[${oss.name}](${oss.url})`);
+      mdBody.h4(siteTitle!);
+      for await (let item of items) {
+        const { link } = item;
+        const title = (lang == 'ja') ? item.title : await translate(item.title!, 'ja', lang);
+        mdBody.text(`- [${title}](${link})`).newline();
+      };
+    };
+  };
+
+  for await (let blog of dataSource.awsBlogs) {
+    const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
+    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (items.length > 0) {
+      mdBody.h4(siteTitle!);
+      for await (let item of items) {
+        const { link } = item;
+        const title = (lang == 'en') ? item.title : await translate(item.title!, 'en', lang);
+        mdBody.text(`- [${title}](${link})`).newline();
+      };
+    };
+  };
+
+  let hasOssHeader = false;
+  for await (let repo of dataSource.githubRepos) {
+    const repoUrl = `https://github.com/${repo.name}/`;
+    const feedUrl = `https://github.com/${repo.name}/releases.atom`;
+    let { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    items = items.filter(item => !item.title?.includes('unstable'));
+    if (items.length > 0) {
+      if (!hasOssHeader) {
+        mdBody.h3('Open Source Project');
+        hasOssHeader = true;
+      };
+      mdBody.h4(`[${repo.title}](${repoUrl})`);
       for await (let item of items) {
         const { title, link } = item;
         mdBody.text(`- [${title}](${link})`).newline();

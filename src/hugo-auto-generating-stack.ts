@@ -48,23 +48,23 @@ export class HugoStack extends Stack {
       resources: ['*'],
     });
 
-    const createSummaryFunction = new NodejsFunction(this, 'CreateSummaryFunction', {
-      description: 'Create summary',
+    const createPostFunction = new NodejsFunction(this, 'CreatePostFunction', {
+      description: 'Create new post',
       entry: './src/functions/create-summary/index.ts',
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_14_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(3),
       environment: {
-        POWERTOOLS_SERVICE_NAME: 'CreateSummaryFunction',
+        POWERTOOLS_SERVICE_NAME: 'CreatePostFunction',
         POWERTOOLS_METRICS_NAMESPACE: this.stackName,
         POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
         BUCKET_NAME: bucket.bucketName,
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    bucket.grantPut(createSummaryFunction, 'hugo/content/*');
-    createSummaryFunction.addToRolePolicy(translateStatement);
+    bucket.grantPut(createPostFunction, 'hugo/content/*');
+    createPostFunction.addToRolePolicy(translateStatement);
 
     const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
       code: cf.FunctionCode.fromFile({
@@ -123,16 +123,16 @@ export class HugoStack extends Stack {
     bucket.grantRead(buildProject, 'hugo/*');
     bucket.grantWrite(buildProject, 'hugo/public/*');
 
-    const createSummaryEnTask = new sfnTasks.LambdaInvoke(this, 'Create Summary EN', {
-      lambdaFunction: createSummaryFunction,
+    const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Daily AWS EN', {
+      lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
         lang: 'en',
       }),
     });
 
-    const createSummaryJaTask = new sfnTasks.LambdaInvoke(this, 'Create Summary JA', {
-      lambdaFunction: createSummaryFunction,
+    const createJapanesePostTask = new sfnTasks.LambdaInvoke(this, 'Daily AWS JA', {
+      lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
         lang: 'ja',
@@ -161,7 +161,7 @@ export class HugoStack extends Stack {
       iamAction: 'cloudfront:CreateInvalidation',
     });
 
-    const createSummaryTask = new sfn.Parallel(this, 'Create Summary').branch(createSummaryEnTask).branch(createSummaryJaTask);
+    const createSummaryTask = new sfn.Parallel(this, 'Create Summary').branch(createJapanesePostTask).branch(createEnglishPostTask);
     createSummaryTask.next(hugoBuildTask).next(clearCdnCacheTask);
 
     const generateHugoContentsJob = new sfn.StateMachine(this, 'GenerateHugoContents', {
