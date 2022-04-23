@@ -11,8 +11,10 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@aws-sdk/client-s3',
     '@aws-sdk/client-translate',
     '@types/aws-lambda',
+    'canvas@2.9.1',
     'markdown-doc-builder@1.3.0',
-    'rss-parser',
+    'node-fetch',
+    'rss-parser@3.12.0',
   ],
   gitignore: [
     'hugo/content',

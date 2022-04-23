@@ -114,6 +114,11 @@
       "type": "runtime"
     },
     {
+      "name": "canvas",
+      "version": "2.9.1",
+      "type": "runtime"
+    },
+    {
       "name": "constructs",
       "version": "^10.0.5",
       "type": "runtime"
@@ -124,7 +129,12 @@
       "type": "runtime"
     },
     {
+      "name": "node-fetch",
+      "type": "runtime"
+    },
+    {
       "name": "rss-parser",
+      "version": "3.12.0",
       "type": "runtime"
     }
   ],

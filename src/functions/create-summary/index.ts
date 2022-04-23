@@ -6,6 +6,7 @@ import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate
 import { Handler } from 'aws-lambda';
 import markdown from 'markdown-doc-builder';
 import Parser from 'rss-parser';
+import { CreatePostOutputEvent } from '../utils';
 
 const bucketName = process.env.BUCKET_NAME!;
 
@@ -24,8 +25,9 @@ const dataSource = {
         name: {
           ja: 'AWS Black Belt Online Seminar (日本語)',
           en: 'AWS Black Belt Online Seminar (Japanese)',
-        } }
-    ]
+        },
+      },
+    ],
   },
   awsJapanBlogs: [
     {
@@ -138,10 +140,16 @@ export const handler: Handler = async (event: Event, _context) => {
   latestPubDate.setHours(0, 0, 0, 0);
 
   const oldestPubDate = new Date(latestPubDate);
-  if (latestPubDate.getDay() == 1) {
-    oldestPubDate.setDate(latestPubDate.getDate() - 3);
-  } else {
-    oldestPubDate.setDate(latestPubDate.getDate() - 1);
+  switch (latestPubDate.getDay()) {
+    case 0:
+      oldestPubDate.setDate(latestPubDate.getDate() - 2);
+      break;
+    case 1:
+      oldestPubDate.setDate(latestPubDate.getDate() - 3);
+      break;
+    default:
+      oldestPubDate.setDate(latestPubDate.getDate() - 1);
+      break;
   };
 
   const contentDateString = oldestPubDate.toISOString().split('T')[0];
@@ -151,7 +159,9 @@ export const handler: Handler = async (event: Event, _context) => {
   const contentdescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const contentObjectKey = `hugo/content/posts/daily-aws-${contentDateString}.${lang}.md`;
+  const contentPath = `hugo/content/posts/daily-aws-${contentDateString}`;
+  const contentKey = `${contentPath}/index.${lang}.md`;
+  const coverImageKey = `${contentPath}/cover.${lang}.png`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
@@ -162,6 +172,10 @@ export const handler: Handler = async (event: Event, _context) => {
     categories: [
       'aws',
     ],
+    thumbnail: `posts/daily-aws-${contentDateString}/cover.${lang}.png`,
+    //cover: {
+    //  image: `posts/daily-aws-${contentDateString}/cover.${lang}.png`,
+    //},
   };
 
   const mdBody = markdown.newBuilder()
@@ -262,9 +276,17 @@ export const handler: Handler = async (event: Event, _context) => {
 
   await s3.send(new PutObjectCommand({
     Bucket: bucketName,
-    Key: contentObjectKey,
+    Key: contentKey,
     Body: mdBody.toMarkdown(),
   }));
 
-  return { bucket: bucketName, key: contentObjectKey };
+  const payload: CreatePostOutputEvent = {
+    title: contentTitle,
+    description: contentdescription,
+    bucket: bucketName,
+    key: contentKey,
+    coverImageKey: coverImageKey,
+  };
+
+  return payload;
 };

@@ -66,6 +66,42 @@ export class HugoStack extends Stack {
     bucket.grantPut(createPostFunction, 'hugo/content/*');
     createPostFunction.addToRolePolicy(translateStatement);
 
+    const createOgpImageFunction = new NodejsFunction(this, 'CreateOgpImageFunction', {
+      description: 'Create ogp image',
+      entry: './src/functions/create-ogp-image/index.ts',
+      bundling: {
+        nodeModules: ['canvas'],
+        commandHooks: {
+          beforeInstall() {
+            return [];
+          },
+          beforeBundling(): string[] {
+            return [];
+          },
+          afterBundling(_inputDir: string, outputDir: string) {
+            return [
+              `mkdir ${outputDir}/lib`,
+              `cp /lib/x86_64-linux-gnu/libuuid.so.1 ${outputDir}/lib/`,
+            ];
+          },
+        },
+      },
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_14_X,
+      architecture: lambda.Architecture.X86_64,
+      timeout: Duration.minutes(3),
+      environment: {
+        LD_PRELOAD: '/var/task/node_modules/canvas/build/Release/libz.so.1',
+        POWERTOOLS_SERVICE_NAME: 'CreateOgpImageFunction',
+        POWERTOOLS_METRICS_NAMESPACE: this.stackName,
+        POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
+        BUCKET_NAME: bucket.bucketName,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    bucket.grantRead(createOgpImageFunction, 'hugo/*');
+    bucket.grantPut(createOgpImageFunction, 'hugo/content/*');
+
     const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
       code: cf.FunctionCode.fromFile({
         filePath: './src/functions/url-rewrite/index.js',
@@ -123,7 +159,7 @@ export class HugoStack extends Stack {
     bucket.grantRead(buildProject, 'hugo/*');
     bucket.grantWrite(buildProject, 'hugo/public/*');
 
-    const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Daily AWS EN', {
+    const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Create English Post', {
       lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
@@ -131,13 +167,23 @@ export class HugoStack extends Stack {
       }),
     });
 
-    const createJapanesePostTask = new sfnTasks.LambdaInvoke(this, 'Daily AWS JA', {
+    const createJapanesePostTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Post', {
       lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
         lang: 'ja',
       }),
     });
+
+    const createEnglisCoverImageTask = new sfnTasks.LambdaInvoke(this, 'Create Englis Image', {
+      lambdaFunction: createOgpImageFunction,
+    });
+    createEnglishPostTask.next(createEnglisCoverImageTask);
+
+    const createJapaneseCoverImageTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Image', {
+      lambdaFunction: createOgpImageFunction,
+    });
+    createJapanesePostTask.next(createJapaneseCoverImageTask);
 
     const hugoBuildTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
@@ -170,8 +216,8 @@ export class HugoStack extends Stack {
 
     const scheduledHugoBuildRule = new events.Rule(this, 'ScheduledHugoBuild', {
       description: 'Create hugo contents every day',
-      schedule: events.Schedule.expression('cron(59 21,23 ? * MON-FRI *)'),
-      //schedule: events.Schedule.expression('cron(59 * ? * MON-FRI *)'),
+      schedule: events.Schedule.expression('cron(59 21,23 ? * SUN-THU *)'),
+      //schedule: events.Schedule.expression('cron(59 * ? * SUN-THU *)'),
     });
     scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
 

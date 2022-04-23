@@ -15,14 +15,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: node.js setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+      - name: yarn install
+        run: yarn install
+      - name: Build
+        run: npx projen build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
-      - name: Build
-        id: build
-        run: yarn install && npx projen build
       - name: Deploy
         id: deploy
         run: $(npm bin)/cdk deploy --require-approval never
