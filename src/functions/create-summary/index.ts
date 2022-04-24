@@ -7,6 +7,7 @@ import { Handler } from 'aws-lambda';
 import markdown from 'markdown-doc-builder';
 import Parser from 'rss-parser';
 import { CreatePostOutputEvent } from '../utils';
+import { source } from './config';
 
 const bucketName = process.env.BUCKET_NAME!;
 
@@ -16,91 +17,6 @@ const bucketName = process.env.BUCKET_NAME!;
 
 const parser = new Parser();
 const s3 = new S3Client({});
-
-const dataSource = {
-  youtube: {
-    playlists: [
-      {
-        id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
-        name: {
-          ja: 'AWS Black Belt Online Seminar (日本語)',
-          en: 'AWS Black Belt Online Seminar (Japanese)',
-        },
-      },
-    ],
-  },
-  awsJapanBlogs: [
-    {
-      category: 'news',
-      name: {
-        ja: 'Amazon Web Services ブログ (日本語)',
-        en: 'AWS Japan Blog (Japanese)',
-      },
-    },
-    {
-      category: 'startup',
-      name: {
-        ja: 'AWS Startup ブログ (日本語)',
-        en: 'AWS Japan Startup Blog (Japanese)',
-      },
-    },
-  ],
-  awsBlogs: [
-    { category: 'aws' }, // AWS News Blog
-    { category: 'startups' },
-    { category: 'opensource' },
-    { category: 'architecture' },
-    { category: 'aws-cloud-financial-management' },
-    { category: 'mt' }, // AWS Cloud Operations & Migrations Blog
-    //{ category: 'apn' }, // AWS Partner Network (APN) Blog
-    //{ category: 'awsmarketplace' },
-    { category: 'big-data' },
-    { category: 'business-productivity' },
-    { category: 'compute' },
-    { category: 'contact-center' },
-    { category: 'containers' },
-    { category: 'database' },
-    { category: 'desktop-and-application-streaming' },
-    { category: 'developer' }, // AWS Developer Tools Blog
-    { category: 'devops' },
-    //{ category: 'enterprise-strategy' },
-    { category: 'mobile' }, // Front-End Web & Mobile
-    //{ category: 'gametech' },
-    { category: 'hpc' },
-    { category: 'infrastructure-and-automation' },
-    { category: 'industries' },
-    { category: 'iot' },
-    { category: 'machine-learning' },
-    { category: 'media' },
-    { category: 'messaging-and-targeting' },
-    { category: 'networking-and-content-delivery' },
-    //{ category: 'publicsector' },
-    { category: 'quantum-computing' },
-    { category: 'robotics' },
-    //{ category: 'awsforsap' }, // SAP
-    { category: 'security' },
-    { category: 'storage' },
-    //{ category: 'training-and-certification' },
-    //{ category: 'modernizing-with-aws' }, // Windows on AWS
-  ],
-  githubRepos: [
-    { title: 'AWS CDK', name: 'aws/aws-cdk' },
-    //{ title: 'AWS Amplify CLI', name: 'aws-amplify/amplify-cli' },
-    { title: 'Amplify for JavaScript', name: 'aws-amplify/amplify-js' },
-    { title: 'Amplify for iOS', name: 'aws-amplify/amplify-ios' },
-    { title: 'Amplify for Android', name: 'aws-amplify/amplify-android' },
-    { title: 'Amplify for Flutter', name: 'aws-amplify/amplify-flutter' },
-    { title: 'Amplify UI', name: 'aws-amplify/amplify-ui' },
-    { title: 'OpenSearch', name: 'opensearch-project/OpenSearch' },
-    { title: 'Amazon Chime SDK for JavaScript', name: 'aws/amazon-chime-sdk-js' },
-    { title: 'AWS Copilot CLI', name: 'aws/copilot-cli' },
-    { title: 'Firecracker', name: 'firecracker-microvm/firecracker' },
-    { title: 'Bottlerocket OS', name: 'bottlerocket-os/bottlerocket' },
-    { title: 'AWS Load Balancer Controller', name: 'kubernetes-sigs/aws-load-balancer-controller' },
-    { title: 'Karpenter', name: 'aws/karpenter' },
-    { title: 'Amazon EKS Anywhere', name: 'aws/eks-anywhere' },
-  ],
-};
 
 const translate = async (text: string, sourceLanguageCode: string, targetLanguageCode: string) => {
   const client = new TranslateClient({});
@@ -135,47 +51,47 @@ export const handler: Handler = async (event: Event, _context) => {
     ? new Date(time)
     : new Date();
 
-  const latestPubDate = new Date(executedDate);
-  latestPubDate.setDate(latestPubDate.getDate() + 1);
-  latestPubDate.setHours(0, 0, 0, 0);
-
-  const oldestPubDate = new Date(latestPubDate);
-  switch (latestPubDate.getDay()) {
+  const oldestPubDate = new Date(executedDate);
+  oldestPubDate.setHours(0, 0, 0, 0);
+  const latestPubDate = new Date(oldestPubDate);
+  switch (executedDate.getDay()) {
     case 0:
-      oldestPubDate.setDate(latestPubDate.getDate() - 2);
+      oldestPubDate.setDate(oldestPubDate.getDate() - 2);
+      latestPubDate.setDate(latestPubDate.getDate() + 1);
       break;
-    case 1:
-      oldestPubDate.setDate(latestPubDate.getDate() - 3);
+    case 6:
+      oldestPubDate.setDate(oldestPubDate.getDate() - 1);
+      latestPubDate.setDate(latestPubDate.getDate() + 2);
+      break;
+    case 5:
+      latestPubDate.setDate(latestPubDate.getDate() + 3);
       break;
     default:
-      oldestPubDate.setDate(latestPubDate.getDate() - 1);
+      latestPubDate.setDate(latestPubDate.getDate() + 1);
       break;
   };
 
-  const contentDateString = oldestPubDate.toISOString().split('T')[0];
-  const contentTitle = (lang == 'ja')
-    ? `日刊AWS ${contentDateString}`
-    : `Daily AWS ${contentDateString}`;
-  const contentdescription = (lang == 'ja')
+  const postDateString = oldestPubDate.toISOString().split('T')[0];
+  const postTitle = (lang == 'ja')
+    ? `日刊AWS ${postDateString}`
+    : `Daily AWS ${postDateString}`;
+  const postDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const contentPath = `hugo/content/posts/daily-aws-${contentDateString}`;
-  const contentKey = `${contentPath}/index.${lang}.md`;
-  const coverImageKey = `${contentPath}/cover.${lang}.png`;
+  const postPath = `hugo/content/posts/daily-aws-${postDateString}`;
+  const postKey = `${postPath}/index.${lang}.md`;
+  const thumbnailKey = `${postPath}/thumbnail.${lang}.png`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
-    title: contentTitle,
-    description: contentdescription,
-    date: contentDateString,
+    title: postTitle,
+    description: postDescription,
+    date: postDateString,
     lastmod: executedDate.toISOString(),
     categories: [
       'aws',
     ],
-    thumbnail: `posts/daily-aws-${contentDateString}/cover.${lang}.png`,
-    //cover: {
-    //  image: `posts/daily-aws-${contentDateString}/cover.${lang}.png`,
-    //},
+    thumbnail: `posts/daily-aws-${postDateString}/thumbnail.${lang}.png`,
   };
 
   const mdBody = markdown.newBuilder()
@@ -183,7 +99,11 @@ export const handler: Handler = async (event: Event, _context) => {
     .text(JSON.stringify(frontMatter))
     .newline();
 
-  //mdBody.text(`${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`).newline();
+  const pubDateRange = (lang == 'ja')
+    ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
+    : `${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`;
+
+  mdBody.text(pubDateRange).newline();
 
   await (async() => {
     const siteTitle = (lang == 'ja') ? '最近の発表' : 'Recent Announcements';
@@ -208,7 +128,7 @@ export const handler: Handler = async (event: Event, _context) => {
   })();
 
   let hasVideoHeader = false;
-  for await (let playlist of dataSource.youtube.playlists) {
+  for await (let playlist of source.youtube.playlists) {
     const siteTitle = (lang == 'ja') ? playlist.name.ja : playlist.name.en;
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlist.id}`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
@@ -228,7 +148,7 @@ export const handler: Handler = async (event: Event, _context) => {
 
   mdBody.h3('AWS Blogs');
 
-  for await (let blog of dataSource.awsJapanBlogs) {
+  for await (let blog of source.awsJapanBlogs) {
     const siteTitle = (lang == 'ja') ? blog.name.ja : blog.name.en;
     const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
@@ -242,7 +162,7 @@ export const handler: Handler = async (event: Event, _context) => {
     };
   };
 
-  for await (let blog of dataSource.awsBlogs) {
+  for await (let blog of source.awsBlogs) {
     const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
     const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (items.length > 0) {
@@ -256,7 +176,7 @@ export const handler: Handler = async (event: Event, _context) => {
   };
 
   let hasOssHeader = false;
-  for await (let repo of dataSource.githubRepos) {
+  for await (let repo of source.githubRepos) {
     const repoUrl = `https://github.com/${repo.name}/`;
     const feedUrl = `https://github.com/${repo.name}/releases.atom`;
     let { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
@@ -276,16 +196,18 @@ export const handler: Handler = async (event: Event, _context) => {
 
   await s3.send(new PutObjectCommand({
     Bucket: bucketName,
-    Key: contentKey,
+    Key: postKey,
     Body: mdBody.toMarkdown(),
   }));
 
   const payload: CreatePostOutputEvent = {
-    title: contentTitle,
-    description: contentdescription,
+    lang,
+    title: postTitle,
+    description: postDescription,
+    pubDateRange,
     bucket: bucketName,
-    key: contentKey,
-    coverImageKey: coverImageKey,
+    key: postKey,
+    thumbnailKey,
   };
 
   return payload;

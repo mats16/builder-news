@@ -49,7 +49,7 @@ const downloadFile = async (url: string, destPath: string) => {
 
 const size = { width: 1200, height: 630 };
 
-const generateOgpImage = async (title: string, description: string): Promise<Buffer> => {
+const generateOgpImage = async (title: string, description: string, pubDateRange: string): Promise<Buffer> => {
   // font を登録
   await downloadFile('https://fonts.gstatic.com/ea/notosansjapanese/v6/NotoSansJP-Bold.otf', '/tmp/NotoSansJP-Bold.otf');
   registerFont('/tmp/NotoSansJP-Bold.otf', { family: 'NotoSansJP' });
@@ -66,36 +66,40 @@ const generateOgpImage = async (title: string, description: string): Promise<Buf
   // 元の画像を canvas にセットする
   //ctx.drawImage(image, 0, 0, width, height);
 
-  context.fillStyle = '#fff';
+  context.fillStyle = '#F2F3F3';
   context.fillRect(0, 0, width, height);
 
-  context.textAlign = 'center';
-  context.fillStyle = '#000000';
-  context.font = 'bold 70pt NotoSansJP';
-  context.fillText(title, 600, 300);
+  context.fillStyle = '#EB9D3F';
+  context.fillRect(60, 68, 1098, 514);
 
-  //description
-  context.textAlign = 'center';
-  context.fillStyle = '#000000';
-  context.font = 'bold 25pt NotoSansJP';
-  context.fillText(description, 600, 400);
+  context.fillStyle = '#FFFFFF';
+  context.fillRect(48, 54, 1098, 514);
 
-  // Header
-  context.textBaseline = 'top';
+  // Title
+  context.textBaseline = 'middle';
+  context.fillStyle = '#000000';
+  context.font = 'bold 62pt NotoSansJP';
+  context.fillText(title, 110, 180);
+
+  // Description
   context.fillStyle = '#000000';
   context.font = 'bold 30pt NotoSansJP';
-  context.fillText('Builder News', 200, 70);
+  context.fillText(description, 120, 280);
 
-  // Footer
   context.fillStyle = '#000000';
-  context.font = 'bold 30pt NotoSansJP';
-  context.fillText('news.wktk.dev', 600, 530);
+  context.font = 'bold 14pt NotoSansJP';
+  context.fillText(pubDateRange, 120, 500);
+
+  // Site Name
+  context.fillStyle = '#000000';
+  context.font = 'bold 32pt NotoSansJP';
+  context.fillText('Builder News', 820, 500);
 
   return canvas.toBuffer('image/png');
 };
 export const handler: Handler = async (event, _context) => {
   const payload: CreatePostOutputEvent = event.Payload;
-  const { title, description, coverImageKey } = payload;
-  const ogpImage = await generateOgpImage(title, description);
-  await putObject(bucketName, coverImageKey, ogpImage);
+  const { title, description, pubDateRange, thumbnailKey } = payload;
+  const thumbnailImage = await generateOgpImage(title, description, pubDateRange);
+  await putObject(bucketName, thumbnailKey, thumbnailImage);
 };

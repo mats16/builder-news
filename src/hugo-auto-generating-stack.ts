@@ -215,13 +215,17 @@ export class HugoStack extends Stack {
     });
 
     const scheduledHugoBuildRule = new events.Rule(this, 'ScheduledHugoBuild', {
-      description: 'Create hugo contents every day',
-      schedule: events.Schedule.expression('cron(59 21,23 ? * SUN-THU *)'),
-      //schedule: events.Schedule.expression('cron(59 * ? * SUN-THU *)'),
+      description: 'Create new postd for Hugo every day',
+      schedule: events.Schedule.expression('cron(59 21,23 ? * SUN-FRI *)'),
+      //schedule: events.Schedule.expression('cron(0/5 * ? * * *)'),
     });
-    scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob));
+    scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob, {
+      maxEventAge: Duration.hours(1),
+      retryAttempts: 3,
+    }));
 
-    const hugoConfigChanedRure = new events.Rule(this, 'HugoConfigChaned', {
+    const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChaned', {
+      description: 'Rebuild static pages, because Hugo config changed',
       eventPattern: {
         source: ['aws.s3'],
         detailType: ['Object Created'],
@@ -235,7 +239,7 @@ export class HugoStack extends Stack {
         },
       },
     });
-    hugoConfigChanedRure.addTarget(new targets.CodeBuildProject(buildProject));
+    hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
 
     this.exportValue(`https://${cfCname||cfDistribution.distributionDomainName}/`, { name: 'Url' });
   }
