@@ -123,7 +123,10 @@ export class HugoStack extends Stack {
         ],
       },
       defaultRootObject: 'index.html',
-      errorResponses: [{ httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' }],
+      errorResponses: [
+        { httpStatus: 403, ttl: Duration.days(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
+        { httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' },
+      ],
     });
 
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
