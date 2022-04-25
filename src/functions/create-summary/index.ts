@@ -91,13 +91,13 @@ export const handler: Handler = async (event: Event, _context) => {
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
     draft: isDraft,
+    isCJKLanguage: (lang == 'ja') ? true : false,
     title: postTitle,
     description: postDescription,
     date: latestPubDate.toISOString(),
     //lastmod: executedDate.toISOString(),
-    categories: [
-      'aws',
-    ],
+    categories: ['aws'],
+    series: ['daily-aws'],
     thumbnail: `posts/daily-aws-${postDateString}/thumbnail.${lang}.png`,
   };
 
