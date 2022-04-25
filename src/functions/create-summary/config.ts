@@ -81,4 +81,7 @@ export const source = {
     { title: 'Karpenter', name: 'aws/karpenter' },
     { title: 'Amazon EKS Anywhere', name: 'aws/eks-anywhere' },
   ],
+  connpass: [
+    { id: 'aws-startup-community' },
+  ],
 };

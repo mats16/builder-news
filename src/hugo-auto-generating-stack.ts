@@ -149,7 +149,7 @@ export class HugoStack extends Stack {
             commands: [
               'rm -rf ./public/*',
               'curl -L ${HUGO_DOWNLOAD_URL} | tar zx -C /usr/local/bin',
-              'hugo -D',
+              'hugo --buildDrafts --buildFuture',
               'aws s3 sync --delete ./public/ s3://${BUCKET_NAME}/hugo/public/',
             ],
           },
@@ -214,15 +214,31 @@ export class HugoStack extends Stack {
       definition: createSummaryTask,
     });
 
-    const scheduledHugoBuildRule = new events.Rule(this, 'ScheduledHugoBuild', {
-      description: 'Create new postd for Hugo every day',
-      schedule: events.Schedule.expression('cron(59 21,23 ? * SUN-FRI *)'),
-      //schedule: events.Schedule.expression('cron(0/5 * ? * * *)'),
+    new events.Rule(this, 'ScheduledStablePostRule', {
+      description: 'Create stable post for Hugo every day',
+      schedule: events.Schedule.expression('cron(0 0 ? * MON-SAT *)'),
+      targets: [new targets.SfnStateMachine(generateHugoContentsJob, {
+        maxEventAge: Duration.hours(1),
+        retryAttempts: 3,
+        input: events.RuleTargetInput.fromObject({
+          time: events.EventField.time,
+          isDraft: false,
+        }),
+      })],
     });
-    scheduledHugoBuildRule.addTarget(new targets.SfnStateMachine(generateHugoContentsJob, {
-      maxEventAge: Duration.hours(1),
-      retryAttempts: 3,
-    }));
+
+    new events.Rule(this, 'ScheduledDraftPost', {
+      description: 'Create draft post for Hugo every day',
+      schedule: events.Schedule.expression('cron(0 22 ? * SUN-FRI *)'),
+      targets: [new targets.SfnStateMachine(generateHugoContentsJob, {
+        maxEventAge: Duration.hours(1),
+        retryAttempts: 3,
+        input: events.RuleTargetInput.fromObject({
+          time: events.EventField.time,
+          isDraft: true,
+        }),
+      })],
+    });
 
     const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChaned', {
       description: 'Rebuild static pages, because Hugo config changed',

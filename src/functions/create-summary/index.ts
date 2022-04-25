@@ -44,6 +44,7 @@ interface Event {
 };
 
 export const handler: Handler = async (event: Event, _context) => {
+  let isDraft = false;
   const lang = event.lang || 'ja';
   const time: string|undefined = event.input?.time; // 2022-04-14T12:10:00Z
 
@@ -51,23 +52,27 @@ export const handler: Handler = async (event: Event, _context) => {
     ? new Date(time)
     : new Date();
 
-  const oldestPubDate = new Date(executedDate);
-  oldestPubDate.setHours(0, 0, 0, 0);
-  const latestPubDate = new Date(oldestPubDate);
-  switch (executedDate.getDay()) {
-    case 0:
-      oldestPubDate.setDate(oldestPubDate.getDate() - 2);
-      latestPubDate.setDate(latestPubDate.getDate() + 1);
-      break;
+  const latestPubDate = new Date(executedDate);
+  if (executedDate.getHours() != 0 || executedDate() != 0) {
+    isDraft = true;
+    latestPubDate.setHours(0, 0, 0, 0);
+    latestPubDate.setDate(latestPubDate.getDate() + 1);
+  }
+  const oldestPubDate = new Date(latestPubDate);
+  oldestPubDate.setDate(oldestPubDate.getDate() - 1);
+
+  switch (latestPubDate.getDay()) {
     case 6:
-      oldestPubDate.setDate(oldestPubDate.getDate() - 1);
       latestPubDate.setDate(latestPubDate.getDate() + 2);
       break;
-    case 5:
-      latestPubDate.setDate(latestPubDate.getDate() + 3);
+    case 0:
+      latestPubDate.setDate(latestPubDate.getDate() + 1);
+      oldestPubDate.setDate(oldestPubDate.getDate() - 1);
+      break;
+    case 1:
+      oldestPubDate.setDate(oldestPubDate.getDate() - 2);
       break;
     default:
-      latestPubDate.setDate(latestPubDate.getDate() + 1);
       break;
   };
 
@@ -84,10 +89,11 @@ export const handler: Handler = async (event: Event, _context) => {
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
+    draft: isDraft,
     title: postTitle,
     description: postDescription,
-    date: postDateString,
-    lastmod: executedDate.toISOString(),
+    date: latestPubDate.toISOString(),
+    //lastmod: executedDate.toISOString(),
     categories: [
       'aws',
     ],
