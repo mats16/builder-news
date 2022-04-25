@@ -47,14 +47,14 @@ interface Event {
 export const handler: Handler = async (event: Event, _context) => {
   const lang = event.lang || 'ja';
   const time: string|undefined = event.input?.time; // 2022-04-14T12:10:00Z
-  const isDraft: boolean = event.input?.isDraft || true;
+  const isDraft: boolean = (typeof event.input?.isDraft == 'boolean') ? event.input?.isDraft : true;
 
   const executedDate = (typeof time == 'string')
     ? new Date(time)
     : new Date();
 
   const latestPubDate = new Date(executedDate);
-  if (isDraft) {
+  if (latestPubDate.getHours() != 0 || latestPubDate.getMinutes() != 0) {
     latestPubDate.setHours(0, 0, 0, 0);
     latestPubDate.setDate(latestPubDate.getDate() + 1);
   }
