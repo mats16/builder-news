@@ -10,6 +10,7 @@ import { CreatePostOutputEvent } from '../utils';
 import { source } from './config';
 
 const bucketName = process.env.BUCKET_NAME!;
+const hugoContentBucketPath = 'hugo/content';
 
 //const logger = new Logger();
 //const metrics = new Metrics();
@@ -77,14 +78,15 @@ export const handler: Handler = async (event: Event, _context) => {
 
   const postDateString = oldestPubDate.toISOString().split('T')[0];
   const postTitle = (lang == 'ja')
-    ? `日刊AWS ${postDateString}`
+    ? `Daily AWS ${postDateString}`
     : `Daily AWS ${postDateString}`;
   const postDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const postPath = `hugo/content/posts/daily-aws-${postDateString}`;
-  const postKey = `${postPath}/index.${lang}.md`;
-  const thumbnailKey = `${postPath}/thumbnail.${lang}.png`;
+  const postUrlPath = `posts/daily-aws-${postDateString.replace(/-/g, '')}`;
+  const postBucketPath = `${hugoContentBucketPath}/${postUrlPath}`;
+  const postKey = `${postBucketPath}/index.${lang}.md`;
+  const thumbnailKey = `${postBucketPath}/thumbnail.${lang}.png`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {

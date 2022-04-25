@@ -49,10 +49,12 @@ const downloadFile = async (url: string, destPath: string) => {
 
 const size = { width: 1200, height: 630 };
 
-const generateOgpImage = async (title: string, description: string, pubDateRange: string): Promise<Buffer> => {
+const generateOgpImage = async (title: string, description: string, pubDateRange: string, lang: string = 'ja'): Promise<Buffer> => {
   // font を登録
-  await downloadFile('https://fonts.gstatic.com/ea/notosansjapanese/v6/NotoSansJP-Bold.otf', '/tmp/NotoSansJP-Bold.otf');
-  registerFont('/tmp/NotoSansJP-Bold.otf', { family: 'NotoSansJP' });
+  if (lang == 'ja') {
+    await downloadFile('https://fonts.gstatic.com/ea/notosansjapanese/v6/NotoSansJP-Bold.otf', '/tmp/NotoSansJP-Bold.otf');
+    registerFont('/tmp/NotoSansJP-Bold.otf', { family: 'NotoSansJP' });
+  }
 
   // canvas を作成
   const { width, height } = size;
@@ -78,21 +80,25 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
   // Title
   context.textBaseline = 'middle';
   context.fillStyle = '#000000';
-  context.font = 'bold 62pt NotoSansJP';
+  context.font = 'bold 62pt Arial';
   context.fillText(title, 110, 180);
 
   // Description
   context.fillStyle = '#000000';
-  context.font = 'bold 30pt NotoSansJP';
+  if (lang == 'ja') {
+    context.font = 'bold 30pt NotoSansJP';
+  } else {
+    context.font = 'bold 30pt Arial';
+  }
   context.fillText(description, 120, 280);
 
   context.fillStyle = '#000000';
-  context.font = 'bold 14pt NotoSansJP';
+  context.font = 'bold 14pt Arial';
   context.fillText(pubDateRange, 120, 500);
 
   // Site Name
   context.fillStyle = '#000000';
-  context.font = 'bold 32pt NotoSansJP';
+  context.font = 'bold 32pt Arial';
   context.fillText('Builder News', 820, 500);
 
   return canvas.toBuffer('image/png');
