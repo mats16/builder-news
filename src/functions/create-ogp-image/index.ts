@@ -80,7 +80,11 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
   // Title
   context.textBaseline = 'middle';
   context.fillStyle = '#000000';
-  context.font = 'bold 62pt Arial';
+  if (lang == 'ja') {
+    context.font = 'bold 62pt NotoSansJP';
+  } else {
+    context.font = 'bold 62pt Arial';
+  }
   context.fillText(title, 110, 180);
 
   // Description
