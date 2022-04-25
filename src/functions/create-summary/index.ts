@@ -97,7 +97,7 @@ export const handler: Handler = async (event: Event, _context) => {
     date: latestPubDate.toISOString(),
     //lastmod: executedDate.toISOString(),
     categories: ['aws'],
-    series: ['daily-aws'],
+    //series: ['daily-aws'],
     thumbnail: `posts/daily-aws-${postDateString}/thumbnail.${lang}.png`,
   };
 
