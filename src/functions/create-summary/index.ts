@@ -96,8 +96,9 @@ export const handler: Handler = async (event: Event, _context) => {
     description: postDescription,
     date: latestPubDate.toISOString(),
     //lastmod: executedDate.toISOString(),
-    categories: ['aws'],
-    //series: ['daily-aws'],
+    categories: ['news'],
+    series: ['daily-aws'],
+    tags: ['aws'],
     thumbnail: `posts/daily-aws-${postDateString}/thumbnail.${lang}.png`,
   };
 
@@ -107,8 +108,8 @@ export const handler: Handler = async (event: Event, _context) => {
     .newline();
 
   const pubDateRange = (lang == 'ja')
-    ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
-    : `${oldestPubDate.toUTCString()} ~ ${latestPubDate.toUTCString()}`;
+    ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST)`
+    : `${oldestPubDate.toLocaleString('en-US', { timeZone: 'UCT' })} ~ ${latestPubDate.toLocaleString('en-US', { timeZone: 'UTC' })} (UTC)`;
 
   mdBody.text(pubDateRange).newline();
 

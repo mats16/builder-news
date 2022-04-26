@@ -2,8 +2,18 @@ title: Builder News
 paginate: 5
 theme: PaperMod
 
-hasCJKLanguage: true
+taxonomies:
+  category: categories
+  series: series
+  tag: tags
 
+params:
+  #ShowShareButtons: true
+  ShowToc: true
+  ShowPostNavLinks: true
+  comments: true
+
+hasCJKLanguage: true
 defaultContentLanguage: ja
 languages:
   en:
@@ -12,9 +22,3 @@ languages:
   ja:
     languageName: 日本語
     weight: 1
-
-params:
-  #ShowShareButtons: true
-  ShowToc: true
-  ShowPostNavLinks: true
-  comments: true
