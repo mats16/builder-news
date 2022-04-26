@@ -96,8 +96,9 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
   }
   context.fillText(description, 120, 280);
 
+  // Date Range
   context.fillStyle = '#000000';
-  context.font = 'bold 14pt Arial';
+  context.font = 'bold 16pt Arial';
   context.fillText(pubDateRange, 120, 500);
 
   // Site Name
