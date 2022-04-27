@@ -6,7 +6,7 @@ import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate
 import { Handler } from 'aws-lambda';
 import markdown from 'markdown-doc-builder';
 import Parser from 'rss-parser';
-import { CreatePostOutputEvent } from '../utils';
+import { CreateThumbnailInputPayload } from '../create-thumbnail';
 import { source } from './config';
 
 const bucketName = process.env.BUCKET_NAME!;
@@ -208,12 +208,11 @@ export const handler: Handler = async (event: Event, _context) => {
     Body: mdBody.toMarkdown(),
   }));
 
-  const payload: CreatePostOutputEvent = {
+  const payload: CreateThumbnailInputPayload = {
     lang,
     title: postTitle,
     description: postDescription,
     pubDateRange,
-    bucket: bucketName,
     key: postKey,
     thumbnailKey,
   };

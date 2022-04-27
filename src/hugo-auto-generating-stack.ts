@@ -66,41 +66,19 @@ export class HugoStack extends Stack {
     bucket.grantPut(createPostFunction, 'hugo/content/*');
     createPostFunction.addToRolePolicy(translateStatement);
 
-    const createOgpImageFunction = new NodejsFunction(this, 'CreateOgpImageFunction', {
-      description: 'Create ogp image',
-      entry: './src/functions/create-ogp-image/index.ts',
-      bundling: {
-        nodeModules: ['canvas'],
-        commandHooks: {
-          beforeInstall() {
-            return [];
-          },
-          beforeBundling(): string[] {
-            return [];
-          },
-          afterBundling(_inputDir: string, outputDir: string) {
-            return [
-              `mkdir ${outputDir}/lib`,
-              `cp /lib/x86_64-linux-gnu/libuuid.so.1 ${outputDir}/lib/`,
-            ];
-          },
-        },
-      },
-      handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_14_X,
-      architecture: lambda.Architecture.X86_64,
+    const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
+      description: 'Create thumbnail image and put to S3',
+      code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/'),
       timeout: Duration.minutes(3),
       environment: {
-        LD_PRELOAD: '/var/task/node_modules/canvas/build/Release/libz.so.1',
-        POWERTOOLS_SERVICE_NAME: 'CreateOgpImageFunction',
+        POWERTOOLS_SERVICE_NAME: 'CreateThumbnailFunction',
         POWERTOOLS_METRICS_NAMESPACE: this.stackName,
         POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
         BUCKET_NAME: bucket.bucketName,
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    bucket.grantRead(createOgpImageFunction, 'hugo/*');
-    bucket.grantPut(createOgpImageFunction, 'hugo/content/*');
+    bucket.grantPut(createThumbnailFunction, 'hugo/content/*.png');
 
     const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
       code: cf.FunctionCode.fromFile({
@@ -178,15 +156,15 @@ export class HugoStack extends Stack {
       }),
     });
 
-    const createEnglisCoverImageTask = new sfnTasks.LambdaInvoke(this, 'Create Englis Image', {
-      lambdaFunction: createOgpImageFunction,
+    const createEnglisThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Create Englis Thumbnail', {
+      lambdaFunction: createThumbnailFunction,
     });
-    createEnglishPostTask.next(createEnglisCoverImageTask);
+    createEnglishPostTask.next(createEnglisThumbnailTask);
 
-    const createJapaneseCoverImageTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Image', {
-      lambdaFunction: createOgpImageFunction,
+    const createJapaneseThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Thumbnail', {
+      lambdaFunction: createThumbnailFunction,
     });
-    createJapanesePostTask.next(createJapaneseCoverImageTask);
+    createJapanesePostTask.next(createJapaneseThumbnailTask);
 
     const hugoBuildTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,

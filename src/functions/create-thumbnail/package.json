@@ -1,0 +1,22 @@
+{
+  "name": "create-thumbnail-image",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.ts",
+  "scripts": {
+    "build": "docker build -t create-thumbnail-function:latest .",
+    "serve": "docker run -p 9000:8080 create-thumbnail-function:latest",
+    "dev": "npm run build && npm run serve"
+  },
+  "author": "Kazuki Matsuda",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.76.0",
+    "@types/aws-lambda": "^8.10.95",
+    "canvas": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.27",
+    "typescript": "^4.6.3"
+  }
+}
