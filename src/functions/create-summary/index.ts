@@ -97,7 +97,7 @@ export const handler: Handler = async (event: Event, _context) => {
     categories: ['news'],
     series: ['daily-aws'],
     tags: ['aws'],
-    thumbnail: `${urlPath}/tmb.${lang}.png`,
+    thumbnail: `${urlPath}/thumbnail.${lang}.png`,
   };
 
   const mdBody = markdown.newBuilder()
