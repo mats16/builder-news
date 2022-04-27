@@ -86,7 +86,7 @@ export const handler: Handler = async (event: Event, _context) => {
   const postUrlPath = `posts/daily-aws-${postDateString.replace(/-/g, '')}`;
   const postBucketPath = `${hugoContentBucketPath}/${postUrlPath}`;
   const postKey = `${postBucketPath}/index.${lang}.md`;
-  const thumbnailKey = `${postBucketPath}/thumbnail.${lang}.png`;
+  const thumbnailKey = `${postBucketPath}/tmb.${lang}.png`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
@@ -99,7 +99,7 @@ export const handler: Handler = async (event: Event, _context) => {
     categories: ['news'],
     series: ['daily-aws'],
     tags: ['aws'],
-    thumbnail: `posts/daily-aws-${postDateString}/thumbnail.${lang}.png`,
+    thumbnail: `posts/daily-aws-${postDateString}/tmb.${lang}.png`,
   };
 
   const mdBody = markdown.newBuilder()
