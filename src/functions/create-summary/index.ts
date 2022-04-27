@@ -83,10 +83,8 @@ export const handler: Handler = async (event: Event, _context) => {
   const postDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const postUrlPath = `posts/daily-aws-${postDateString.replace(/-/g, '')}`;
-  const postBucketPath = `${hugoContentBucketPath}/${postUrlPath}`;
-  const postKey = `${postBucketPath}/index.${lang}.md`;
-  const thumbnailKey = `${postBucketPath}/tmb.${lang}.png`;
+  const urlPath = `posts/daily-aws-${postDateString.replace(/-/g, '')}`;
+  const objectKey = `${hugoContentBucketPath}/${urlPath}/index.${lang}.md`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
@@ -99,7 +97,7 @@ export const handler: Handler = async (event: Event, _context) => {
     categories: ['news'],
     series: ['daily-aws'],
     tags: ['aws'],
-    thumbnail: `posts/daily-aws-${postDateString}/tmb.${lang}.png`,
+    thumbnail: `${urlPath}/tmb.${lang}.png`,
   };
 
   const mdBody = markdown.newBuilder()
@@ -204,7 +202,7 @@ export const handler: Handler = async (event: Event, _context) => {
 
   await s3.send(new PutObjectCommand({
     Bucket: bucketName,
-    Key: postKey,
+    Key: objectKey,
     Body: mdBody.toMarkdown(),
   }));
 
@@ -214,7 +212,7 @@ export const handler: Handler = async (event: Event, _context) => {
     description: postDescription,
     pubDateRange,
     key: postKey,
-    thumbnailKey,
+    thumbnailKey: `${hugoContentBucketPath}/${frontMatter.thumbnail}`,
   };
 
   return payload;
