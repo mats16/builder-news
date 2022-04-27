@@ -211,7 +211,7 @@ export const handler: Handler = async (event: Event, _context) => {
     title: postTitle,
     description: postDescription,
     pubDateRange,
-    key: postKey,
+    key: objectKey,
     thumbnailKey: `${hugoContentBucketPath}/${frontMatter.thumbnail}`,
   };
 
