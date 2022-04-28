@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:14 AS build
+FROM public.ecr.aws/lambda/nodejs:14-x86_64 AS build
 
 COPY package.json ${LAMBDA_TASK_ROOT}/
 
@@ -8,7 +8,7 @@ COPY app.ts tsconfig.json ${LAMBDA_TASK_ROOT}/
 
 RUN $(npm bin)/tsc
 
-FROM public.ecr.aws/lambda/nodejs:14
+FROM public.ecr.aws/lambda/nodejs:14-x86_64
 
 COPY ./fonts/ /etc/fonts/
 

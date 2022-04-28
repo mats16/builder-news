@@ -74,6 +74,7 @@ export class HugoStack extends Stack {
     const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
       description: 'Create thumbnail image and put to S3',
       code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/'),
+      architecture: lambda.Architecture.X86_64,
       timeout: Duration.minutes(3),
       environment: {
         POWERTOOLS_SERVICE_NAME: 'CreateThumbnailFunction',
