@@ -31,6 +31,10 @@ export class HugoStack extends Stack {
 
     const { cfCname, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
+    const hugoBucketPath = 'hugo';
+    const hugoContentBucketPath = `${hugoBucketPath}/content`;
+    const hugoPublicBucketPath = `${hugoBucketPath}/public`;
+
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       eventBridgeEnabled: true,
@@ -39,10 +43,9 @@ export class HugoStack extends Stack {
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
       sources: [s3deploy.Source.asset('./hugo')],
       destinationBucket: bucket,
-      destinationKeyPrefix: 'hugo/',
+      destinationKeyPrefix: `${hugoBucketPath}/`,
       prune: false,
     });
-    const hugoContentBucketPath = 'hugo/content';
 
     const translateStatement = new iam.PolicyStatement({
       actions: ['translate:TranslateText'],
@@ -94,7 +97,7 @@ export class HugoStack extends Stack {
       domainNames: (typeof cfCname == 'undefined') ? undefined : [cfCname],
       certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
       defaultBehavior: {
-        origin: new S3Origin(bucket, { originPath: '/hugo/public' }),
+        origin: new S3Origin(bucket, { originPath: `/${hugoPublicBucketPath}` }),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.HTTPS_ONLY,
         functionAssociations: [
           {
@@ -114,13 +117,14 @@ export class HugoStack extends Stack {
       description: 'Hugo - Build static pages',
       source: codebuild.Source.s3({
         bucket: bucket,
-        path: 'hugo/',
+        path: `${hugoBucketPath}/`,
       }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
       environmentVariables: {
         HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
-        BUCKET_NAME: { value: bucket.bucketName },
+        HUGO_BUCKET_NAME: { value: bucket.bucketName },
+        HUGO_PUBLIC_BUCKET_PATH: { value: hugoPublicBucketPath },
         HUGO_BASEURL: { value: `https://${cfCname||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
         HUGO_GOOGLEANALYTICS: { value: hugoGoogleAnalytics || '' },
@@ -134,14 +138,14 @@ export class HugoStack extends Stack {
               'rm -rf ./public/*',
               'curl -L ${HUGO_DOWNLOAD_URL} | tar zx -C /usr/local/bin',
               'hugo --buildDrafts --buildFuture',
-              'aws s3 sync --delete ./public/ s3://${BUCKET_NAME}/hugo/public/',
+              'aws s3 sync --delete ./public/ s3://${HUGO_BUCKET_NAME}/${HUGO_PUBLIC_BUCKET_PATH}/',
             ],
           },
         },
       }),
     });
-    bucket.grantRead(buildProject, 'hugo/*');
-    bucket.grantWrite(buildProject, 'hugo/public/*');
+    bucket.grantRead(buildProject, `${hugoBucketPath}/*`);
+    bucket.grantWrite(buildProject, `${hugoPublicBucketPath}/*`);
 
     const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Create English Post', {
       lambdaFunction: createPostFunction,
