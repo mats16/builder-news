@@ -9,8 +9,8 @@ import Parser from 'rss-parser';
 import { CreateThumbnailInputPayload } from '../create-thumbnail';
 import { source } from './config';
 
-const bucketName = process.env.BUCKET_NAME!;
-const hugoContentBucketPath = 'hugo/content';
+const hugoContentBucketName = process.env.HUGO_CONTENT_BUCKET_NAME!;
+const hugoContentBucketPath = process.env.HUGO_CONTENT_BUCKET_PATH || 'content';
 
 //const logger = new Logger();
 //const metrics = new Metrics();
@@ -97,7 +97,6 @@ export const handler: Handler = async (event: Event, _context) => {
     categories: ['news'],
     series: ['daily-aws'],
     tags: ['aws'],
-    thumbnail: `${urlPath}/thumbnail.${lang}.png`,
   };
 
   const mdBody = markdown.newBuilder()
@@ -201,7 +200,7 @@ export const handler: Handler = async (event: Event, _context) => {
   };
 
   await s3.send(new PutObjectCommand({
-    Bucket: bucketName,
+    Bucket: hugoContentBucketName,
     Key: objectKey,
     Body: mdBody.toMarkdown(),
   }));
@@ -211,8 +210,7 @@ export const handler: Handler = async (event: Event, _context) => {
     title: postTitle,
     description: postDescription,
     pubDateRange,
-    key: objectKey,
-    thumbnailKey: `${hugoContentBucketPath}/${frontMatter.thumbnail}`,
+    urlPath: urlPath,
   };
 
   return payload;

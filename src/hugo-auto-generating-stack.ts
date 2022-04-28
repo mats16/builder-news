@@ -42,6 +42,7 @@ export class HugoStack extends Stack {
       destinationKeyPrefix: 'hugo/',
       prune: false,
     });
+    const hugoContentBucketPath = 'hugo/content';
 
     const translateStatement = new iam.PolicyStatement({
       actions: ['translate:TranslateText'],
@@ -59,11 +60,12 @@ export class HugoStack extends Stack {
         POWERTOOLS_SERVICE_NAME: 'CreatePostFunction',
         POWERTOOLS_METRICS_NAMESPACE: this.stackName,
         POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
-        BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_BUCKET_PATH: hugoContentBucketPath,
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    bucket.grantPut(createPostFunction, 'hugo/content/*');
+    bucket.grantPut(createPostFunction, `${hugoContentBucketPath}/*`);
     createPostFunction.addToRolePolicy(translateStatement);
 
     const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
@@ -74,11 +76,12 @@ export class HugoStack extends Stack {
         POWERTOOLS_SERVICE_NAME: 'CreateThumbnailFunction',
         POWERTOOLS_METRICS_NAMESPACE: this.stackName,
         POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
-        BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_BUCKET_PATH: hugoContentBucketPath,
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    bucket.grantPut(createThumbnailFunction, 'hugo/content/*.png');
+    bucket.grantPut(createThumbnailFunction, `${hugoContentBucketPath}/*.png`);
 
     const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
       code: cf.FunctionCode.fromFile({

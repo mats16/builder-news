@@ -8,11 +8,11 @@ export interface CreateThumbnailInputPayload {
   title: string;
   description: string;
   pubDateRange: string;
-  key: string;
-  thumbnailKey: string;
+  urlPath: string;
 };
 
-const bucketName = process.env.BUCKET_NAME!;
+const hugoContentBucketName = process.env.HUGO_CONTENT_BUCKET_NAME!;
+const hugoContentBucketPath = process.env.HUGO_CONTENT_BUCKET_PATH || 'content';
 
 const s3 = new S3Client({});
 
@@ -85,7 +85,8 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
 };
 export const handler: Handler = async (event, _context) => {
   const payload: CreateThumbnailInputPayload = event.Payload;
-  const { title, description, pubDateRange, thumbnailKey } = payload;
+  const { title, description, pubDateRange, urlPath, lang } = payload;
   const thumbnailImage = await generateOgpImage(title, description, pubDateRange);
-  await putObject(bucketName, thumbnailKey, thumbnailImage);
+  const objectKey = `${hugoContentBucketPath}/${urlPath}/thumbnail.${lang}.png`;
+  await putObject(hugoContentBucketName, objectKey, thumbnailImage);
 };
