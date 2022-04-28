@@ -54,7 +54,7 @@ export class HugoStack extends Stack {
 
     const createPostFunction = new NodejsFunction(this, 'CreatePostFunction', {
       description: 'Create new post',
-      entry: './src/functions/create-summary/index.ts',
+      entry: './src/functions/create-post/index.ts',
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_14_X,
       architecture: lambda.Architecture.ARM_64,
@@ -68,7 +68,7 @@ export class HugoStack extends Stack {
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
-    bucket.grantPut(createPostFunction, `${hugoContentBucketPath}/*`);
+    bucket.grantReadWrite(createPostFunction, `${hugoContentBucketPath}/*.md`);
     createPostFunction.addToRolePolicy(translateStatement);
 
     const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {

@@ -1,7 +1,7 @@
 //import { Logger } from '@aws-lambda-powertools/logger';
 //import { Metrics } from '@aws-lambda-powertools/metrics';
 //import { Tracer } from '@aws-lambda-powertools/tracer';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate';
 import { Handler } from 'aws-lambda';
 import markdown from 'markdown-doc-builder';
@@ -16,8 +16,21 @@ const hugoContentBucketPath = process.env.HUGO_CONTENT_BUCKET_PATH || 'content';
 //const metrics = new Metrics();
 //const tracer = new Tracer();
 
-const parser = new Parser();
 const s3 = new S3Client({});
+
+const getMetadata = async (bucket: string, key: string, metadataKey: string): Promise<string|undefined> => {
+  const cmd = new HeadObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  try {
+    const { Metadata } = await s3.send(cmd);
+    const val = Metadata?.[metadataKey];
+    return val;
+  } catch (error) {
+    return undefined;
+  }
+};
 
 const translate = async (text: string, sourceLanguageCode: string, targetLanguageCode: string) => {
   const client = new TranslateClient({});
@@ -31,6 +44,7 @@ const translate = async (text: string, sourceLanguageCode: string, targetLanguag
 };
 
 const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date) => {
+  const parser = new Parser();
   const feed = await parser.parseURL(feedUrl);
   feed.items = feed.items.filter((item) => {
     const pubDate = new Date(item.pubDate!);
@@ -92,8 +106,8 @@ export const handler: Handler = async (event: Event, _context) => {
     isCJKLanguage: (lang == 'ja') ? true : false,
     title: postTitle,
     description: postDescription,
-    date: latestPubDate.toISOString(),
-    //lastmod: executedDate.toISOString(),
+    date: await getMetadata(hugoContentBucketName, objectKey, 'date') || executedDate.toISOString(),
+    lastmod: executedDate.toISOString(),
     categories: ['news'],
     series: ['daily-aws'],
     tags: ['aws'],
@@ -199,11 +213,21 @@ export const handler: Handler = async (event: Event, _context) => {
     };
   };
 
-  await s3.send(new PutObjectCommand({
+  const putObjectCommand = new PutObjectCommand({
     Bucket: hugoContentBucketName,
     Key: objectKey,
     Body: mdBody.toMarkdown(),
-  }));
+    ContentType: 'text/markdown; charset=UTF-8',
+    Metadata: {
+      draft: (frontMatter.draft) ? 'true' : 'false',
+      date: frontMatter.date,
+      lastmod: frontMatter.lastmod,
+      categories: frontMatter.categories.toString(),
+      series: frontMatter.series.toString(),
+      tags: frontMatter.tags.toString(),
+    },
+  });
+  await s3.send(putObjectCommand);
 
   const payload: CreateThumbnailInputPayload = {
     lang,

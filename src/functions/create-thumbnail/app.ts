@@ -34,8 +34,13 @@ const getObject = async (bucket: string, key: string): Promise<Buffer> => {
   return buffer;
 };
 
-const putObject = async (bucket: string, key: string, body: Buffer) => {
-  const cmd = new PutObjectCommand({ Bucket: bucket, Key: key, Body: body });
+const putObject = async (bucket: string, key: string, body: Buffer, contentType: string = 'image/png') => {
+  const cmd = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
   await s3.send(cmd);
   return;
 };
