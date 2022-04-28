@@ -1,6 +1,10 @@
 {
   "dependencies": [
     {
+      "name": "@types/bluebird",
+      "type": "build"
+    },
+    {
       "name": "@types/jest",
       "type": "build"
     },
@@ -111,6 +115,11 @@
     {
       "name": "aws-cdk-lib",
       "version": "^2.20.0",
+      "type": "runtime"
+    },
+    {
+      "name": "bluebird",
+      "version": "3.7.2",
       "type": "runtime"
     },
     {

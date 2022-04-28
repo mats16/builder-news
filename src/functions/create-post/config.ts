@@ -1,26 +1,35 @@
 export const source = {
   youtube: {
-    playlists: [
+    channels: [
       {
-        id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
-        name: {
-          ja: 'AWS Black Belt Online Seminar (日本語)',
-          en: 'AWS Black Belt Online Seminar (Japanese)',
+        id: 'UCnjKWUK2t5QJYfeqqilhJhQ',
+        title: {
+          ja: 'Amazon Web Services Japan 公式 (日本語)',
+          en: 'Amazon Web Services Japan Official (Japanese)',
         },
       },
     ],
+    //playlists: [
+    //  {
+    //    id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
+    //    title: {
+    //      ja: 'AWS Black Belt Online Seminar (日本語)',
+    //      en: 'AWS Black Belt Online Seminar (Japanese)',
+    //    },
+    //  },
+    //],
   },
   awsJapanBlogs: [
     {
       category: 'news',
-      name: {
+      title: {
         ja: 'Amazon Web Services ブログ (日本語)',
         en: 'AWS Japan Blog (Japanese)',
       },
     },
     {
       category: 'startup',
-      name: {
+      title: {
         ja: 'AWS Startup ブログ (日本語)',
         en: 'AWS Japan Startup Blog (Japanese)',
       },

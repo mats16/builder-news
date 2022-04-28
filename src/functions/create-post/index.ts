@@ -4,6 +4,7 @@
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate';
 import { Handler } from 'aws-lambda';
+import { Promise } from 'bluebird';
 import markdown from 'markdown-doc-builder';
 import Parser from 'rss-parser';
 import { CreateThumbnailInputPayload } from '../create-thumbnail';
@@ -58,6 +59,25 @@ interface Event {
   input?: any;
 };
 
+interface contentData {
+  announcements: ({[key: string]: any} & Parser.Item)[];
+  youtube: {
+    title: string;
+    //link: string;
+    items: ({[key: string]: any} & Parser.Item)[];
+  }[];
+  blogs: {
+    title: string;
+    //link: string;
+    items: ({[key: string]: any} & Parser.Item)[];
+  }[];
+  oss: {
+    title: string;
+    link: string;
+    items: ({[key: string]: any} & Parser.Item)[];
+  }[];
+}
+
 export const handler: Handler = async (event: Event, _context) => {
   const lang = event.lang || 'ja';
   const time: string|undefined = event.input?.time; // 2022-04-14T12:10:00Z
@@ -90,6 +110,10 @@ export const handler: Handler = async (event: Event, _context) => {
       break;
   };
 
+  const pubDateRange = (lang == 'ja')
+    ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST)`
+    : `${oldestPubDate.toLocaleString('en-US', { timeZone: 'UCT' })} ~ ${latestPubDate.toLocaleString('en-US', { timeZone: 'UTC' })} (UTC)`;
+
   const postDateString = oldestPubDate.toISOString().split('T')[0];
   const postTitle = (lang == 'ja')
     ? `日刊AWS ${postDateString}`
@@ -110,108 +134,131 @@ export const handler: Handler = async (event: Event, _context) => {
     lastmod: executedDate.toISOString(),
     categories: ['news'],
     series: ['daily-aws'],
-    tags: ['aws'],
+    tags: [] as string[],
   };
+
+  const data: contentData = {
+    announcements: [],
+    youtube: [],
+    blogs: [],
+    oss: [],
+  };
+
+  await (async() => {
+    const feedUrl = 'https://aws.amazon.com/new/feed/';
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (lang != 'en') {
+      await Promise.map(
+        items,
+        async (item) => {
+          item.contentSnippet = await translate(item.contentSnippet!, 'en', lang);
+        },
+        { concurrency: 5 },
+      );
+    }
+    items.map((item) => {
+      const categories = item.categories?.flatMap(x => x.split(',')) || [];
+      const products = categories?.filter(x => x.startsWith('general:products/')).map(x => x.replace('general:products/', ''));
+      frontMatter.tags.push(...products);
+    });
+    data.announcements.push(...items);
+  })();
+
+  for await (let channel of source.youtube.channels) {
+    const channelTitle = (lang == 'ja') ? channel.title.ja : channel.title.en;
+    //const channelUrl = `https://www.youtube.com/channel/${channel.id}`;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`;
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (lang != 'ja') {
+      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
+    }
+    if (items.length > 0) {
+      data.youtube.push({ title: `${channelTitle}`, items });
+    }
+  };
+
+  for await (let blog of source.awsJapanBlogs) {
+    const blogTitle = (lang == 'ja') ? blog.title.ja : blog.title.en;
+    const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (lang != 'ja') {
+      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
+    }
+    if (items.length > 0) {
+      data.blogs.push({ title: `${blogTitle}`, items });
+    }
+  };
+
+  for await (let blog of source.awsBlogs) {
+    const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
+    const { title: blogTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (lang != 'en') {
+      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'en', lang); }, { concurrency: 5 });
+    }
+    if (items.length > 0) {
+      data.blogs.push({ title: `${blogTitle}`, items });
+    }
+  };
+
+  for await (let repo of source.githubRepos) {
+    const repoUrl = `https://github.com/${repo.name}/`;
+    const feedUrl = `https://github.com/${repo.name}/releases.atom`;
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    //items = items.filter(item => !item.title?.includes('unstable'));
+    if (items.length > 0) {
+      data.oss.push({ title: repo.title, link: repoUrl, items });
+    }
+  };
+
+  frontMatter.tags = Array.from(new Set(frontMatter.tags));
 
   const mdBody = markdown.newBuilder()
     .headerOrdered(false)
     .text(JSON.stringify(frontMatter))
     .newline();
 
-  const pubDateRange = (lang == 'ja')
-    ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST)`
-    : `${oldestPubDate.toLocaleString('en-US', { timeZone: 'UCT' })} ~ ${latestPubDate.toLocaleString('en-US', { timeZone: 'UTC' })} (UTC)`;
-
   mdBody.text(pubDateRange).newline();
 
-  await (async() => {
-    const siteTitle = (lang == 'ja') ? '最近の発表' : 'Recent Announcements';
-    //const siteUrl = 'https://aws.amazon.com/new/';
-    const feedUrl = 'https://aws.amazon.com/new/feed/';
-    mdBody.h3(siteTitle);
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      for await (let item of items) {
-        const { title, link, contentSnippet } = item;
-        mdBody.bold(`[${title}](${link})`).newline();
-        if (lang == 'en') {
-          mdBody.blockQuote(contentSnippet!);
-        } else {
-          const translatedContentSnippet = await translate(contentSnippet!, 'en', lang);
-          mdBody.blockQuote(translatedContentSnippet);
-        };
-      };
-    } else {
-      mdBody.text('No updates.').newline();
-    };
-  })();
+  const announcementsHeader = (lang == 'ja') ? '最近の発表' : 'Recent Announcements';
+  mdBody.h3(announcementsHeader);
+  if (data.announcements.length > 0) {
+    for await (let item of data.announcements) {
+      mdBody.bold(`[${item.title}](${item.link})`).newline();
+      mdBody.blockQuote(`${item.contentSnippet}`);
+    }
+  } else {
+    mdBody.text('No updates.').newline();
+  }
 
-  let hasVideoHeader = false;
-  for await (let playlist of source.youtube.playlists) {
-    const siteTitle = (lang == 'ja') ? playlist.name.ja : playlist.name.en;
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlist.id}`;
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      if (!hasVideoHeader) {
-        mdBody.h3('Video');
-        hasVideoHeader = true;
-      };
-      mdBody.h4(siteTitle);
-      for await (let item of items) {
-        let { title, link } = item;
-        if (lang != 'ja') { title = await translate(title!, 'ja', lang); };
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  };
+  if (data.youtube.length > 0) {
+    mdBody.h3('YouTube');
+    for await (let channel of data.youtube) {
+      mdBody.h4(channel.title);
+      for await (let item of channel.items) {
+        mdBody.text(`- [${item.title}](${item.link})`).newline();
+      }
+    }
+  }
 
-  mdBody.h3('AWS Blogs');
+  if (data.blogs.length > 0) {
+    mdBody.h3('AWS Blogs');
+    for await (let blog of data.blogs) {
+      mdBody.h4(blog.title).newline();
+      for await (let item of blog.items) {
+        mdBody.text(`- [${item.title}](${item.link})`).newline();
+      }
+    }
+  }
 
-  for await (let blog of source.awsJapanBlogs) {
-    const siteTitle = (lang == 'ja') ? blog.name.ja : blog.name.en;
-    const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h4(siteTitle!);
-      for await (let item of items) {
-        const { link } = item;
-        const title = (lang == 'ja') ? item.title : await translate(item.title!, 'ja', lang);
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  };
-
-  for await (let blog of source.awsBlogs) {
-    const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
-    const { title: siteTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (items.length > 0) {
-      mdBody.h4(siteTitle!);
-      for await (let item of items) {
-        const { link } = item;
-        const title = (lang == 'en') ? item.title : await translate(item.title!, 'en', lang);
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  };
-
-  let hasOssHeader = false;
-  for await (let repo of source.githubRepos) {
-    const repoUrl = `https://github.com/${repo.name}/`;
-    const feedUrl = `https://github.com/${repo.name}/releases.atom`;
-    let { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    items = items.filter(item => !item.title?.includes('unstable'));
-    if (items.length > 0) {
-      if (!hasOssHeader) {
-        mdBody.h3('Open Source Project');
-        hasOssHeader = true;
-      };
-      mdBody.h4(`[${repo.title}](${repoUrl})`);
-      for await (let item of items) {
-        const { title, link } = item;
-        mdBody.text(`- [${title}](${link})`).newline();
-      };
-    };
-  };
+  if (data.oss.length > 0) {
+    mdBody.h3('Open Source Project');
+    for await (let repo of data.oss) {
+      mdBody.h4(repo.title);
+      for await (let item of repo.items) {
+        mdBody.text(`- [${item.title}](${item.link})`).newline();
+      }
+    }
+  }
 
   const putObjectCommand = new PutObjectCommand({
     Bucket: hugoContentBucketName,
