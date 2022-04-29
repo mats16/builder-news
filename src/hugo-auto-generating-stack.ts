@@ -114,6 +114,11 @@ export class HugoStack extends Stack {
       ],
     });
 
+    const createInvalidationStatement = new iam.PolicyStatement({
+      actions: ['cloudfront:CreateInvalidation'],
+      resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
+    });
+
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Hugo - Build static pages',
       source: codebuild.Source.s3({
@@ -123,30 +128,43 @@ export class HugoStack extends Stack {
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
       environmentVariables: {
-        HUGO_DOWNLOAD_URL: { value: 'https://github.com/gohugoio/hugo/releases/download/v0.97.0/hugo_0.97.0_Linux-64bit.tar.gz' },
-        HUGO_BUCKET_NAME: { value: bucket.bucketName },
-        HUGO_PUBLIC_BUCKET_PATH: { value: hugoPublicBucketPath },
+        HUGO_VERSION: { value: '0.98.0' },
         HUGO_BASEURL: { value: `https://${cfCname||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-        HUGO_GOOGLEANALYTICS: { value: hugoGoogleAnalytics || '' },
-        HUGO_DISQUSSHORTNAME: { value: hugoDisqusShortname || '' },
+        HUGO_GOOGLEANALYTICS: { value: `${hugoGoogleAnalytics}` },
+        HUGO_DISQUSSHORTNAME: { value: `${hugoDisqusShortname}` },
+        BUCKET_NAME: { value: bucket.bucketName },
+        BUCKET_PATH: { value: hugoPublicBucketPath },
+        DISTRIBUTION_ID: { value: cfDistribution.distributionId },
       },
+      cache: codebuild.Cache.bucket(bucket, { prefix: 'codebuild-chache' }),
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
-          build: {
+          install: {
             commands: [
-              'rm -rf ./public/*',
-              'curl -L ${HUGO_DOWNLOAD_URL} | tar zx -C /usr/local/bin',
-              'hugo --buildDrafts --buildFuture',
-              'aws s3 sync --delete ./public/ s3://${HUGO_BUCKET_NAME}/${HUGO_PUBLIC_BUCKET_PATH}/',
+              'HUGO_DOWNLOAD_URL=https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz',
+              'if [ ! -e /tmp/hugo_${HUGO_VERSION}.tar.gz ] ;then curl -L ${HUGO_DOWNLOAD_URL} -o /tmp/hugo_${HUGO_VERSION}.tar.gz; else echo "get hugo binary from cache"; fi',
+              'tar -zxf /tmp/hugo_${HUGO_VERSION}.tar.gz -C /usr/local/bin',
+            ],
+          },
+          build: {
+            commands: ['hugo --buildDrafts'],
+          },
+          post_build: {
+            commands: [
+              'aws s3 sync --delete --no-progress ./public/ s3://${BUCKET_NAME}/${BUCKET_PATH}/',
+              'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*"',
             ],
           },
         },
+        cache: {
+          paths: ['/tmp/hugo_${HUGO_VERSION}.tar.gz'],
+        },
       }),
     });
-    bucket.grantRead(buildProject, `${hugoBucketPath}/*`);
     bucket.grantWrite(buildProject, `${hugoPublicBucketPath}/*`);
+    buildProject.addToRolePolicy(createInvalidationStatement);
 
     const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Create English Post', {
       lambdaFunction: createPostFunction,
@@ -174,30 +192,13 @@ export class HugoStack extends Stack {
     });
     createJapanesePostTask.next(createJapaneseThumbnailTask);
 
-    const hugoBuildTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build', {
+    const hugoBuildDeployTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build & Deploy', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     });
 
-    const clearCdnCacheTask = new sfnTasks.CallAwsService(this, 'Clear CDN Cache', {
-      service: 'CloudFront',
-      action: 'createInvalidation',
-      parameters: {
-        DistributionId: cfDistribution.distributionId,
-        InvalidationBatch: {
-          'CallerReference.$': '$.SdkResponseMetadata.RequestId',
-          'Paths': {
-            Items: ['/*'],
-            Quantity: 1,
-          },
-        },
-      },
-      iamResources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
-      iamAction: 'cloudfront:CreateInvalidation',
-    });
-
     const createSummaryTask = new sfn.Parallel(this, 'Create Summary').branch(createJapanesePostTask).branch(createEnglishPostTask);
-    createSummaryTask.next(hugoBuildTask).next(clearCdnCacheTask);
+    createSummaryTask.next(hugoBuildDeployTask);
 
     const generateHugoContentsJob = new sfn.StateMachine(this, 'GenerateHugoContents', {
       definition: createSummaryTask,
