@@ -17,7 +17,7 @@ import { Construct } from 'constructs';
 
 interface HugoStackProps extends StackProps {
   config: {
-    customDomainName?: string;
+    customDomainNames?: string[];
     acmArn?: string;
     hugoEnv?: string;
     hugoGoogleAnalytics?: string;
@@ -29,7 +29,7 @@ export class HugoStack extends Stack {
   constructor(scope: Construct, id: string, props: HugoStackProps = { config: {} }) {
     super(scope, id, props);
 
-    const { customDomainName, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
+    const { customDomainNames, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
     const hugoBucketPath = 'hugo';
     const hugoContentBucketPath = `${hugoBucketPath}/content`;
@@ -56,8 +56,8 @@ export class HugoStack extends Stack {
 
     const cfDistribution = new cf.Distribution(this, 'Distribution', {
       comment: 'Daily AWS',
-      domainNames: (typeof customDomainName == 'string') ? [customDomainName] : undefined,
-      certificate: (typeof acmArn == 'string') ? acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn) : undefined,
+      domainNames: (typeof customDomainNames == 'undefined') ? undefined : customDomainNames,
+      certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
       defaultBehavior: {
         origin: new S3Origin(bucket, { originPath: `/${hugoPublicBucketPath}` }),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -128,7 +128,7 @@ export class HugoStack extends Stack {
       timeout: Duration.minutes(10),
       environmentVariables: {
         HUGO_VERSION: { value: '0.98.0' },
-        HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
+        HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
         HUGO_PARAMS_COMMENTS: { value: (typeof hugoDisqusShortname == 'string') ? true : false },
         HUGO_DISQUSSHORTNAME: { value: `${hugoDisqusShortname}` },
@@ -247,6 +247,6 @@ export class HugoStack extends Stack {
     });
     hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
 
-    this.exportValue(`https://${customDomainName||cfDistribution.distributionDomainName}/`, { name: 'DailyAwsUrl' });
+    this.exportValue(`https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/`, { name: 'DailyAwsUrl' });
   }
 }
