@@ -21,7 +21,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@types/bluebird',
   ],
   gitignore: [
-    'hugo/content',
     'hugo/public',
   ],
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
