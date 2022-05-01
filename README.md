@@ -1,8 +1,8 @@
-# Builder News
+# Daily AWS Stack
 
 ## How to develop
 
-`pj` = `npx projen`
+`pj = npx projen`
 
 ```bash
 yarn install

@@ -8,7 +8,7 @@ const env = {
 };
 
 const config = {
-  cfCname: process.env.CF_CNAME,
+  customDomainName: process.env.CUSTOM_DOMAIN_NAME,
   acmArn: process.env.ACM_ARN,
   hugoEnv: process.env.HUGO_ENV,
   hugoGoogleAnalytics: process.env.HUGO_GOOGLEANALYTICS,
@@ -17,6 +17,6 @@ const config = {
 
 const app = new App();
 
-new HugoStack(app, 'builder-news-stack', { env, config });
+new HugoStack(app, 'daily-aws-stack', { env, config });
 
 app.synth();

@@ -1,4 +1,4 @@
-title: Builder News
+title: Daily AWS
 paginate: 5
 theme: PaperMod
 
@@ -8,17 +8,25 @@ taxonomies:
   tag: tags
 
 params:
-  #ShowShareButtons: true
+  ShowShareButtons: false
   ShowToc: true
   ShowPostNavLinks: true
-  comments: true
+
+menu:
+  main:
+  #- name: Series
+  #  url: /series/
+  #  weight: 0
+  - name: Tags
+    url: /tags/
+    weight: 1
 
 hasCJKLanguage: true
 defaultContentLanguage: ja
 languages:
-  en:
-    languageName: English
-    weight: 2
   ja:
     languageName: 日本語
     weight: 1
+  en:
+    languageName: English
+    weight: 2

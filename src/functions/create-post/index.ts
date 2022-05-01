@@ -116,12 +116,12 @@ export const handler: Handler = async (event: Event, _context) => {
 
   const postDateString = oldestPubDate.toISOString().split('T')[0];
   const postTitle = (lang == 'ja')
-    ? `日刊AWS ${postDateString}`
+    ? `Daily AWS ${postDateString}`
     : `Daily AWS ${postDateString}`;
   const postDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const urlPath = `posts/daily-aws-${postDateString.replace(/-/g, '')}`;
+  const urlPath = `headlines/${postDateString.replace(/-/g, '')}`;
   const objectKey = `${hugoContentBucketPath}/${urlPath}/index.${lang}.md`;
 
   // https://gohugo.io/content-management/front-matter/

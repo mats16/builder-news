@@ -17,7 +17,7 @@ import { Construct } from 'constructs';
 
 interface HugoStackProps extends StackProps {
   config: {
-    cfCname?: string;
+    customDomainName?: string;
     acmArn?: string;
     hugoEnv?: string;
     hugoGoogleAnalytics?: string;
@@ -29,7 +29,7 @@ export class HugoStack extends Stack {
   constructor(scope: Construct, id: string, props: HugoStackProps = { config: {} }) {
     super(scope, id, props);
 
-    const { cfCname, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
+    const { customDomainName, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
     const hugoBucketPath = 'hugo';
     const hugoContentBucketPath = `${hugoBucketPath}/content`;
@@ -45,6 +45,39 @@ export class HugoStack extends Stack {
       destinationBucket: bucket,
       destinationKeyPrefix: `${hugoBucketPath}/`,
       prune: false,
+    });
+
+    const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
+      comment: 'URL rewrite to append index.html to the URI',
+      code: cf.FunctionCode.fromFile({
+        filePath: './src/functions/url-rewrite/index.js',
+      }),
+    });
+
+    const cfDistribution = new cf.Distribution(this, 'Distribution', {
+      comment: 'Daily AWS',
+      domainNames: (typeof customDomainName == 'string') ? [customDomainName] : undefined,
+      certificate: (typeof acmArn == 'string') ? acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn) : undefined,
+      defaultBehavior: {
+        origin: new S3Origin(bucket, { originPath: `/${hugoPublicBucketPath}` }),
+        viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        functionAssociations: [
+          {
+            eventType: cf.FunctionEventType.VIEWER_REQUEST,
+            function: urlRewriteFunction,
+          },
+        ],
+      },
+      defaultRootObject: 'index.html',
+      errorResponses: [
+        { httpStatus: 403, ttl: Duration.days(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
+        { httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' },
+      ],
+    });
+
+    const createInvalidationStatement = new iam.PolicyStatement({
+      actions: ['cloudfront:CreateInvalidation'],
+      resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
     });
 
     const translateStatement = new iam.PolicyStatement({
@@ -77,47 +110,13 @@ export class HugoStack extends Stack {
       architecture: lambda.Architecture.X86_64,
       timeout: Duration.minutes(3),
       environment: {
-        POWERTOOLS_SERVICE_NAME: 'CreateThumbnailFunction',
-        POWERTOOLS_METRICS_NAMESPACE: this.stackName,
-        POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
         HUGO_CONTENT_BUCKET_NAME: bucket.bucketName,
         HUGO_CONTENT_BUCKET_PATH: hugoContentBucketPath,
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
+    bucket.grantRead(createThumbnailFunction, `${hugoBucketPath}/*.png`);
     bucket.grantPut(createThumbnailFunction, `${hugoContentBucketPath}/*.png`);
-
-    const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
-      code: cf.FunctionCode.fromFile({
-        filePath: './src/functions/url-rewrite/index.js',
-      }),
-    });
-
-    const cfDistribution = new cf.Distribution(this, 'Distribution', {
-      comment: 'Builder News',
-      domainNames: (typeof cfCname == 'undefined') ? undefined : [cfCname],
-      certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
-      defaultBehavior: {
-        origin: new S3Origin(bucket, { originPath: `/${hugoPublicBucketPath}` }),
-        viewerProtocolPolicy: cf.ViewerProtocolPolicy.HTTPS_ONLY,
-        functionAssociations: [
-          {
-            eventType: cf.FunctionEventType.VIEWER_REQUEST,
-            function: urlRewriteFunction,
-          },
-        ],
-      },
-      defaultRootObject: 'index.html',
-      errorResponses: [
-        { httpStatus: 403, ttl: Duration.days(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
-        { httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' },
-      ],
-    });
-
-    const createInvalidationStatement = new iam.PolicyStatement({
-      actions: ['cloudfront:CreateInvalidation'],
-      resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
-    });
 
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Hugo - Build static pages',
@@ -129,10 +128,11 @@ export class HugoStack extends Stack {
       timeout: Duration.minutes(10),
       environmentVariables: {
         HUGO_VERSION: { value: '0.98.0' },
-        HUGO_BASEURL: { value: `https://${cfCname||cfDistribution.distributionDomainName}/` },
+        HUGO_BASEURL: { value: `https://${customDomainName||cfDistribution.distributionDomainName}/` },
         HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-        HUGO_GOOGLEANALYTICS: { value: `${hugoGoogleAnalytics}` },
+        HUGO_PARAMS_COMMENTS: { value: (typeof hugoDisqusShortname == 'string') ? true : false },
         HUGO_DISQUSSHORTNAME: { value: `${hugoDisqusShortname}` },
+        HUGO_GOOGLEANALYTICS: { value: `${hugoGoogleAnalytics}` },
         BUCKET_NAME: { value: bucket.bucketName },
         BUCKET_PATH: { value: hugoPublicBucketPath },
         DISTRIBUTION_ID: { value: cfDistribution.distributionId },
@@ -166,7 +166,7 @@ export class HugoStack extends Stack {
     bucket.grantWrite(buildProject, `${hugoPublicBucketPath}/*`);
     buildProject.addToRolePolicy(createInvalidationStatement);
 
-    const createEnglishPostTask = new sfnTasks.LambdaInvoke(this, 'Create English Post', {
+    const genEnglishArticleTask = new sfnTasks.LambdaInvoke(this, 'English Article', {
       lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
@@ -174,7 +174,7 @@ export class HugoStack extends Stack {
       }),
     });
 
-    const createJapanesePostTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Post', {
+    const genJapaneseArticleTask = new sfnTasks.LambdaInvoke(this, 'Japanese Article', {
       lambdaFunction: createPostFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
@@ -182,56 +182,56 @@ export class HugoStack extends Stack {
       }),
     });
 
-    const createEnglisThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Create Englis Thumbnail', {
+    const genEnglisThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Englis Thumbnail', {
       lambdaFunction: createThumbnailFunction,
     });
-    createEnglishPostTask.next(createEnglisThumbnailTask);
+    genEnglishArticleTask.next(genEnglisThumbnailTask);
 
-    const createJapaneseThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Create Japanese Thumbnail', {
+    const genJapaneseThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Japanese Thumbnail', {
       lambdaFunction: createThumbnailFunction,
     });
-    createJapanesePostTask.next(createJapaneseThumbnailTask);
+    genJapaneseArticleTask.next(genJapaneseThumbnailTask);
 
     const hugoBuildDeployTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build & Deploy', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     });
 
-    const createSummaryTask = new sfn.Parallel(this, 'Create Summary').branch(createJapanesePostTask).branch(createEnglishPostTask);
-    createSummaryTask.next(hugoBuildDeployTask);
+    const genArticleTask = new sfn.Parallel(this, 'Generate Article').branch(genJapaneseArticleTask).branch(genEnglishArticleTask);
+    genArticleTask.next(hugoBuildDeployTask);
 
-    const generateHugoContentsJob = new sfn.StateMachine(this, 'GenerateHugoContents', {
-      definition: createSummaryTask,
+    const genArticleAndHugoBuild = new sfn.StateMachine(this, 'GenArticleAndHugoBuild', {
+      definition: genArticleTask,
     });
 
-    new events.Rule(this, 'ScheduledStablePostRule', {
-      description: 'Create stable post for Hugo every day',
+    const weekday9amRule = new events.Rule(this, 'Weekday9amRule', {
+      description: '[JST] 9AM Weekday',
       schedule: events.Schedule.expression('cron(0 0 ? * MON-SAT *)'),
-      targets: [new targets.SfnStateMachine(generateHugoContentsJob, {
-        maxEventAge: Duration.hours(1),
-        retryAttempts: 3,
-        input: events.RuleTargetInput.fromObject({
-          time: events.EventField.time,
-          isDraft: false,
-        }),
-      })],
     });
+    weekday9amRule.addTarget(new targets.SfnStateMachine(genArticleAndHugoBuild, {
+      maxEventAge: Duration.hours(1),
+      retryAttempts: 3,
+      input: events.RuleTargetInput.fromObject({
+        time: events.EventField.time,
+        isDraft: false,
+      }),
+    }));
 
-    new events.Rule(this, 'ScheduledDraftPost', {
-      description: 'Create draft post for Hugo every day',
-      schedule: events.Schedule.expression('cron(0 22 ? * SUN-FRI *)'),
-      targets: [new targets.SfnStateMachine(generateHugoContentsJob, {
-        maxEventAge: Duration.hours(1),
-        retryAttempts: 3,
-        input: events.RuleTargetInput.fromObject({
-          time: events.EventField.time,
-          isDraft: true,
-        }),
-      })],
+    const everyday7amRule = new events.Rule(this, 'Everyday7amRule', {
+      description: '[JST] 7AM Everyday - for Draft',
+      schedule: events.Schedule.expression('cron(0 22 ? * * *)'),
     });
+    everyday7amRule.addTarget(new targets.SfnStateMachine(genArticleAndHugoBuild, {
+      maxEventAge: Duration.hours(1),
+      retryAttempts: 3,
+      input: events.RuleTargetInput.fromObject({
+        time: events.EventField.time,
+        isDraft: true,
+      }),
+    }));
 
-    const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChaned', {
-      description: 'Rebuild static pages, because Hugo config changed',
+    const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChanedRule', {
+      description: 'Hugo config is changed',
       eventPattern: {
         source: ['aws.s3'],
         detailType: ['Object Created'],
@@ -240,13 +240,13 @@ export class HugoStack extends Stack {
             name: [bucket.bucketName],
           },
           object: {
-            key: [{ prefix: 'hugo/config.' }],
+            key: ['hugo/config.yml'],
           },
         },
       },
     });
     hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
 
-    this.exportValue(`https://${cfCname||cfDistribution.distributionDomainName}/`, { name: 'Url' });
+    this.exportValue(`https://${customDomainName||cfDistribution.distributionDomainName}/`, { name: 'DailyAwsUrl' });
   }
 }

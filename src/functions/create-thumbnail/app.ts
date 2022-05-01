@@ -47,7 +47,7 @@ const putObject = async (bucket: string, key: string, body: Buffer, contentType:
 
 const size = { width: 1200, height: 630 };
 
-const generateOgpImage = async (title: string, description: string, pubDateRange: string, lang: string = 'ja'): Promise<Buffer> => {
+const genThumbnailImage = async (title: string, description: string, pubDateRange: string, lang: string): Promise<Buffer> => {
   // font を登録
   registerFont('/etc/fonts/NotoSansJP-Bold.otf', { family: 'NotoSansJP' });
 
@@ -65,6 +65,12 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
   context.fillStyle = '#FFFFFF';
   context.fillRect(48, 54, 1098, 514);
 
+  // Icon
+  const cloudIcon = await getObject(hugoContentBucketName, 'hugo/static/img/cloud-100.png');
+  await loadImage(cloudIcon).then(image => {
+    context.drawImage(image, 1000, 440, 100, 100);
+  });
+
   // Title
   context.textBaseline = 'middle';
   context.fillStyle = '#000000';
@@ -78,20 +84,20 @@ const generateOgpImage = async (title: string, description: string, pubDateRange
 
   // Date Range
   context.fillStyle = '#000000';
-  context.font = (lang == 'ja') ? 'bold 18pt NotoSansJP' : 'bold 16pt Arial';
+  context.font = (lang == 'ja') ? 'bold 20pt NotoSansJP' : 'bold 18pt Arial';
   context.fillText(pubDateRange, 120, 500);
 
   // Site Name
-  context.fillStyle = '#000000';
-  context.font = 'bold 32pt Arial';
-  context.fillText('Builder News', 820, 500);
+  //context.fillStyle = '#000000';
+  //context.font = 'bold 32pt Arial';
+  //context.fillText('Builder News', 820, 500);
 
   return canvas.toBuffer('image/png');
 };
 export const handler: Handler = async (event, _context) => {
   const payload: CreateThumbnailInputPayload = event.Payload;
   const { title, description, pubDateRange, urlPath, lang } = payload;
-  const thumbnailImage = await generateOgpImage(title, description, pubDateRange);
+  const thumbnailImage = await genThumbnailImage(title, description, pubDateRange, lang);
   const objectKey = `${hugoContentBucketPath}/${urlPath}/thumbnail.${lang}.png`;
   await putObject(hugoContentBucketName, objectKey, thumbnailImage);
 };
