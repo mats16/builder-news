@@ -115,9 +115,10 @@ export const handler: Handler = async (event: Event, _context) => {
     : `${oldestPubDate.toLocaleString('en-US', { timeZone: 'UCT' })} ~ ${latestPubDate.toLocaleString('en-US', { timeZone: 'UTC' })} (UTC)`;
 
   const postDateString = oldestPubDate.toISOString().split('T')[0];
-  const postTitle = (lang == 'ja')
-    ? `Daily AWS ${postDateString}`
-    : `Daily AWS ${postDateString}`;
+  const postTitle = postDateString;
+  //const postTitle = (lang == 'ja')
+  //  ? `Daily AWS ${postDateString}`
+  //  : `Daily AWS ${postDateString}`;
   const postDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';

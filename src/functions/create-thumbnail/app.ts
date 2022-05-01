@@ -68,29 +68,29 @@ const genThumbnailImage = async (title: string, description: string, pubDateRang
   // Icon
   const cloudIcon = await getObject(hugoContentBucketName, 'hugo/static/img/cloud-100.png');
   await loadImage(cloudIcon).then(image => {
-    context.drawImage(image, 1000, 440, 100, 100);
+    context.drawImage(image, 960, 420, 120, 120);
   });
 
   // Title
   context.textBaseline = 'middle';
   context.fillStyle = '#000000';
   context.font = (lang == 'ja') ? 'bold 62pt NotoSansJP' : 'bold 62pt Arial';
-  context.fillText(title, 110, 180);
+  context.fillText(`Daily AWS / ${title}`, 110, 180);
 
   // Description
   context.fillStyle = '#000000';
   context.font = (lang == 'ja') ? 'bold 30pt NotoSansJP' : 'bold 30pt Arial';
-  context.fillText(description, 120, 280);
+  context.fillText(description, 120, 290);
 
   // Date Range
   context.fillStyle = '#000000';
-  context.font = (lang == 'ja') ? 'bold 20pt NotoSansJP' : 'bold 18pt Arial';
-  context.fillText(pubDateRange, 120, 500);
+  context.font = (lang == 'ja') ? 'bold 20pt NotoSansJP' : 'bold 20pt Arial';
+  context.fillText(pubDateRange, 120, 480);
 
   // Site Name
   //context.fillStyle = '#000000';
   //context.font = 'bold 32pt Arial';
-  //context.fillText('Builder News', 820, 500);
+  //context.fillText('Daily AWS', 820, 500);
 
   return canvas.toBuffer('image/png');
 };

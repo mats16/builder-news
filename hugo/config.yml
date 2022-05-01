@@ -14,12 +14,12 @@ params:
 
 menu:
   main:
-  #- name: Series
-  #  url: /series/
-  #  weight: 0
   - name: Tags
     url: /tags/
-    weight: 1
+    weight: 10
+  - name: AWS Blog
+    url: https://aws.amazon.com/blogs/
+    weight: 0
 
 hasCJKLanguage: true
 defaultContentLanguage: ja

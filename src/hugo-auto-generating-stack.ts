@@ -31,6 +31,8 @@ export class HugoStack extends Stack {
 
     const { customDomainNames, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
+    const hugoVersion = '0.98.0';
+
     const hugoBucketPath = 'hugo';
     const hugoContentBucketPath = `${hugoBucketPath}/content`;
     const hugoPublicBucketPath = `${hugoBucketPath}/public`;
@@ -118,6 +120,24 @@ export class HugoStack extends Stack {
     bucket.grantRead(createThumbnailFunction, `${hugoBucketPath}/*.png`);
     bucket.grantPut(createThumbnailFunction, `${hugoContentBucketPath}/*.png`);
 
+    const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
+      HUGO_VERSION: { value: hugoVersion },
+      HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
+      HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
+      HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
+      HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
+      BUCKET_NAME: { value: bucket.bucketName },
+      BUCKET_PATH: { value: hugoPublicBucketPath },
+      DISTRIBUTION_ID: { value: cfDistribution.distributionId },
+    };
+    if (typeof hugoDisqusShortname == 'string') {
+      buildEnvironmentVariables.HUGO_PARAMS_COMMENTS = { value: true };
+      buildEnvironmentVariables.HUGO_DISQUSSHORTNAME = { value: hugoDisqusShortname };
+    };
+    if (typeof hugoGoogleAnalytics == 'string') {
+      buildEnvironmentVariables.HUGO_GOOGLEANALYTICS = { value: hugoGoogleAnalytics };
+    };
+
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Hugo - Build static pages',
       source: codebuild.Source.s3({
@@ -126,26 +146,15 @@ export class HugoStack extends Stack {
       }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
-      environmentVariables: {
-        HUGO_VERSION: { value: '0.98.0' },
-        HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
-        HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-        HUGO_PARAMS_COMMENTS: { value: (typeof hugoDisqusShortname == 'string') ? true : false },
-        HUGO_DISQUSSHORTNAME: { value: `${hugoDisqusShortname}` },
-        HUGO_GOOGLEANALYTICS: { value: `${hugoGoogleAnalytics}` },
-        BUCKET_NAME: { value: bucket.bucketName },
-        BUCKET_PATH: { value: hugoPublicBucketPath },
-        DISTRIBUTION_ID: { value: cfDistribution.distributionId },
-      },
+      environmentVariables: buildEnvironmentVariables,
       cache: codebuild.Cache.bucket(bucket, { prefix: 'codebuild-chache' }),
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
           install: {
             commands: [
-              'HUGO_DOWNLOAD_URL=https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz',
-              'if [ ! -e /tmp/hugo_${HUGO_VERSION}.tar.gz ] ;then curl -L ${HUGO_DOWNLOAD_URL} -o /tmp/hugo_${HUGO_VERSION}.tar.gz; else echo "get hugo binary from cache"; fi',
-              'tar -zxf /tmp/hugo_${HUGO_VERSION}.tar.gz -C /usr/local/bin',
+              'if [ ! -e ${HUGO_BINARY_LOCAL} ] ;then curl -L ${HUGO_BINARY_URL} -o /tmp/hugo_${HUGO_VERSION}.tar.gz; else echo "get hugo binary from cache"; fi',
+              'tar -zxf ${HUGO_BINARY_LOCAL} -C /usr/local/bin',
             ],
           },
           build: {
@@ -159,7 +168,7 @@ export class HugoStack extends Stack {
           },
         },
         cache: {
-          paths: ['/tmp/hugo_${HUGO_VERSION}.tar.gz'],
+          paths: ['${HUGO_BINARY_LOCAL}'],
         },
       }),
     });
