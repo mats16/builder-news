@@ -45,6 +45,7 @@ const translate = async (text: string, sourceLanguageCode: string, targetLanguag
 };
 
 const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date) => {
+  console.log('feedUrl: ' + feedUrl);
   const parser = new Parser();
   const feed = await parser.parseURL(feedUrl);
   feed.items = feed.items.filter((item) => {
