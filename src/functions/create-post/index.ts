@@ -166,18 +166,18 @@ export const handler: Handler = async (event: Event, _context) => {
     data.announcements.push(...items);
   })();
 
-  for await (let playlist of source.youtube.playlists) {
-    const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
-    //const channelUrl = `https://www.youtube.com/channel/${channel.id}`;
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${playlist.id}`;
-    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (lang != 'ja') {
-      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
-    }
-    if (items.length > 0) {
-      data.youtube.push({ title: `${playlistTitle}`, items });
-    }
-  };
+  //for await (let playlist of source.youtube.playlists) {
+  //  const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
+  //  //const channelUrl = `https://www.youtube.com/channel/${channel.id}`;
+  //  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${playlist.id}`;
+  //  const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+  //  if (lang != 'ja') {
+  //    await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
+  //  }
+  //  if (items.length > 0) {
+  //    data.youtube.push({ title: `${playlistTitle}`, items });
+  //  }
+  //};
 
   for await (let blog of source.awsJapanBlogs) {
     const blogTitle = (lang == 'ja') ? blog.title.ja : blog.title.en;
