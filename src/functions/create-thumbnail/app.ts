@@ -66,7 +66,7 @@ const genThumbnailImage = async (title: string, description: string, pubDateRang
   context.fillRect(48, 54, 1098, 514);
 
   // Icon
-  const cloudIcon = await getObject(hugoContentBucketName, 'hugo/static/img/cloud-100.png');
+  const cloudIcon = await getObject(hugoContentBucketName, 'hugo/static/icons/icon-100');
   await loadImage(cloudIcon).then(image => {
     context.drawImage(image, 960, 420, 120, 120);
   });

@@ -9,15 +9,22 @@ export const source = {
         },
       },
     ],
-    //playlists: [
-    //  {
-    //    id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
-    //    title: {
-    //      ja: 'AWS Black Belt Online Seminar (日本語)',
-    //      en: 'AWS Black Belt Online Seminar (Japanese)',
-    //    },
-    //  },
-    //],
+    playlists: [
+      {
+        id: 'PLzWGOASvSx6HEHX13_-VP23UW6WB3wY8Z',
+        title: {
+          ja: 'AWS Developer Live Show (日本語)',
+          en: 'AWS Developer Live Show (Japanese)',
+        },
+      },
+      {
+        id: 'PLzWGOASvSx6FIwIC2X1nObr1KcMCBBlqY',
+        title: {
+          ja: 'AWS Black Belt Online Seminar (日本語)',
+          en: 'AWS Black Belt Online Seminar (Japanese)',
+        },
+      },
+    ],
   },
   awsJapanBlogs: [
     {
@@ -75,6 +82,7 @@ export const source = {
   ],
   githubRepos: [
     { title: 'AWS CDK', name: 'aws/aws-cdk' },
+    { title: 'AWS Chalice', name: 'aws/chalice' },
     //{ title: 'AWS Amplify CLI', name: 'aws-amplify/amplify-cli' },
     { title: 'Amplify for JavaScript', name: 'aws-amplify/amplify-js' },
     { title: 'Amplify for iOS', name: 'aws-amplify/amplify-ios' },

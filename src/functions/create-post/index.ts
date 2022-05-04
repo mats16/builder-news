@@ -165,16 +165,16 @@ export const handler: Handler = async (event: Event, _context) => {
     data.announcements.push(...items);
   })();
 
-  for await (let channel of source.youtube.channels) {
-    const channelTitle = (lang == 'ja') ? channel.title.ja : channel.title.en;
+  for await (let playlist of source.youtube.playlists) {
+    const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
     //const channelUrl = `https://www.youtube.com/channel/${channel.id}`;
-    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${playlist.id}`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
     if (lang != 'ja') {
       await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
     }
     if (items.length > 0) {
-      data.youtube.push({ title: `${channelTitle}`, items });
+      data.youtube.push({ title: `${playlistTitle}`, items });
     }
   };
 
