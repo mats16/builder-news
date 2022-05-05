@@ -81,7 +81,9 @@ export const source = {
     //{ category: 'modernizing-with-aws' }, // Windows on AWS
   ],
   githubRepos: [
+    { title: 'AWS CLI', name: 'aws/aws-cli' },
     { title: 'AWS CDK', name: 'aws/aws-cdk' },
+    { title: 'OpenSearch', name: 'opensearch-project/OpenSearch' },
     { title: 'AWS Chalice', name: 'aws/chalice' },
     //{ title: 'AWS Amplify CLI', name: 'aws-amplify/amplify-cli' },
     { title: 'Amplify for JavaScript', name: 'aws-amplify/amplify-js' },
@@ -89,7 +91,6 @@ export const source = {
     { title: 'Amplify for Android', name: 'aws-amplify/amplify-android' },
     { title: 'Amplify for Flutter', name: 'aws-amplify/amplify-flutter' },
     { title: 'Amplify UI', name: 'aws-amplify/amplify-ui' },
-    { title: 'OpenSearch', name: 'opensearch-project/OpenSearch' },
     { title: 'Amazon Chime SDK for JavaScript', name: 'aws/amazon-chime-sdk-js' },
     { title: 'Amazon Chime SDK React Components Library', name: 'aws/amazon-chime-sdk-component-library-react' },
     { title: 'Amazon Chime SDK for iOS', name: 'aws/amazon-chime-sdk-ios' },

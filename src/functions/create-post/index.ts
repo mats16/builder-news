@@ -54,7 +54,7 @@ const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date
     });
     return feed;
   } catch (err) {
-    console.error(err)
+    console.error(err);
     const feed = { title: 'error', items: [] };
     return feed;
   }

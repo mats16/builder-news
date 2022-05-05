@@ -1,4 +1,4 @@
-name: CDK deploy
+name: deploy
 on:
   push:
     branches:
@@ -6,28 +6,27 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  cdk_deploy:
-    name: Deploy
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write # needed to interact with GitHub's OIDC Token endpoint.
       contents: read
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
       - name: Checkout
         uses: actions/checkout@v2
       - name: node.js setup
         uses: actions/setup-node@v3
         with:
           node-version: '14'
-      - name: yarn install
-        run: yarn install
+      - name: Install dependencies
+        run: yarn install --check-files
       - name: Build
         run: npx projen build
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: us-east-1
       - name: Deploy
         id: deploy
         run: $(npm bin)/cdk deploy --require-approval never
