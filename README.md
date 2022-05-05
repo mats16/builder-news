@@ -1,6 +1,6 @@
-# Daily AWS Stack
+# Daily AWS News
 
-## How to develop
+## How to deploy
 
 `pj = npx projen`
 
