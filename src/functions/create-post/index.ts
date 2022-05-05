@@ -45,14 +45,20 @@ const translate = async (text: string, sourceLanguageCode: string, targetLanguag
 };
 
 const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date) => {
-  console.log('feedUrl: ' + feedUrl);
   const parser = new Parser();
-  const feed = await parser.parseURL(feedUrl);
-  feed.items = feed.items.filter((item) => {
-    const pubDate = new Date(item.pubDate!);
-    return (pubDate > oldestPubDate && pubDate <= latestPubDate);
-  });
-  return feed;
+  try {
+    const feed = await parser.parseURL(feedUrl);
+    feed.items = feed.items.filter((item) => {
+      const pubDate = new Date(item.pubDate!);
+      return (pubDate > oldestPubDate && pubDate <= latestPubDate);
+    });
+    return feed;
+  } catch (err) {
+    console.error(err)
+    const feed = { title: 'error', items: [] };
+    return feed;
+  }
+
 };
 
 interface Event {
@@ -166,27 +172,39 @@ export const handler: Handler = async (event: Event, _context) => {
     data.announcements.push(...items);
   })();
 
-  //for await (let playlist of source.youtube.playlists) {
-  //  const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
+  //for await (let channel of source.youtube.channels) {
+  //  const channelTitle = (lang == 'ja') ? channel.title.ja : channel.title.en;
   //  //const channelUrl = `https://www.youtube.com/channel/${channel.id}`;
-  //  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${playlist.id}`;
+  //  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`;
   //  const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
   //  if (lang != 'ja') {
   //    await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
   //  }
   //  if (items.length > 0) {
-  //    data.youtube.push({ title: `${playlistTitle}`, items });
+  //    data.youtube.push({ title: `${channelTitle}`, items });
   //  }
   //};
+
+  for await (let playlist of source.youtube.playlists) {
+    const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlist.id}`;
+    const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
+    if (items.length > 0) {
+      if (lang != 'ja') {
+        await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
+      }
+      data.youtube.push({ title: `${playlistTitle}`, items });
+    }
+  };
 
   for await (let blog of source.awsJapanBlogs) {
     const blogTitle = (lang == 'ja') ? blog.title.ja : blog.title.en;
     const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (lang != 'ja') {
-      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
-    }
     if (items.length > 0) {
+      if (lang != 'ja') {
+        await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'ja', lang); }, { concurrency: 5 });
+      }
       data.blogs.push({ title: `${blogTitle}`, items });
     }
   };
@@ -194,10 +212,10 @@ export const handler: Handler = async (event: Event, _context) => {
   for await (let blog of source.awsBlogs) {
     const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
     const { title: blogTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
-    if (lang != 'en') {
-      await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'en', lang); }, { concurrency: 5 });
-    }
     if (items.length > 0) {
+      if (lang != 'en') {
+        await Promise.map(items, async (item) => { item.title = await translate(item.title!, 'en', lang); }, { concurrency: 5 });
+      }
       data.blogs.push({ title: `${blogTitle}`, items });
     }
   };
