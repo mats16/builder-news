@@ -18,6 +18,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
       - name: Checkout
         uses: actions/checkout@v2
       - name: node.js setup
