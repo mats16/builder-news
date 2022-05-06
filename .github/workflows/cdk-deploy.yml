@@ -4,6 +4,8 @@ on:
     branches:
       - main
   workflow_dispatch: {}
+env:
+  AWS_REGION : us-west-2
 
 jobs:
   deploy:
@@ -16,7 +18,6 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: us-east-1
       - name: Checkout
         uses: actions/checkout@v2
       - name: node.js setup
@@ -31,7 +32,6 @@ jobs:
         id: deploy
         run: $(npm bin)/cdk deploy --require-approval never
         env:
-          AWS_REGION: us-west-2
           CUSTOM_DOMAIN_NAMES: ${{ secrets.CUSTOM_DOMAIN_NAMES }}
           ACM_ARN: ${{ secrets.ACM_ARN }}
           HUGO_ENV: production
