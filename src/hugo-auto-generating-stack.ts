@@ -35,7 +35,6 @@ export class HugoStack extends Stack {
 
     const hugoBucketPath = 'hugo';
     const hugoContentBucketPath = `${hugoBucketPath}/content`;
-    const hugoPublicBucketPath = `${hugoBucketPath}/public`;
 
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -61,7 +60,7 @@ export class HugoStack extends Stack {
       domainNames: (typeof customDomainNames == 'undefined') ? undefined : customDomainNames,
       certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
       defaultBehavior: {
-        origin: new S3Origin(bucket, { originPath: `/${hugoPublicBucketPath}` }),
+        origin: new S3Origin(bucket, { originPath: 'codebuild/artifacts/staticPages' }),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         functionAssociations: [
           {
@@ -121,13 +120,10 @@ export class HugoStack extends Stack {
     bucket.grantPut(createThumbnailFunction, `${hugoContentBucketPath}/*.png`);
 
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
-      HUGO_VERSION: { value: hugoVersion },
       HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
       HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
       HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
       HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-      BUCKET_NAME: { value: bucket.bucketName },
-      BUCKET_PATH: { value: hugoPublicBucketPath },
       DISTRIBUTION_ID: { value: cfDistribution.distributionId },
     };
     if (typeof hugoDisqusShortname == 'string') {
@@ -144,16 +140,23 @@ export class HugoStack extends Stack {
         bucket: bucket,
         path: `${hugoBucketPath}/`,
       }),
+      artifacts: codebuild.Artifacts.s3({
+        bucket: bucket,
+        path: 'codebuild/artifacts',
+        encryption: false,
+        packageZip: false,
+        includeBuildId: false,
+      }),
+      cache: codebuild.Cache.bucket(bucket, { prefix: 'codebuild/chache' }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
       environmentVariables: buildEnvironmentVariables,
-      cache: codebuild.Cache.bucket(bucket, { prefix: 'codebuild-chache' }),
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
           install: {
             commands: [
-              'if [ ! -e ${HUGO_BINARY_LOCAL} ] ;then curl -L ${HUGO_BINARY_URL} -o /tmp/hugo_${HUGO_VERSION}.tar.gz; else echo "get hugo binary from cache"; fi',
+              'if [ ! -e ${HUGO_BINARY_LOCAL} ] ;then curl -L ${HUGO_BINARY_URL} -o ${HUGO_BINARY_LOCAL}; else echo "get hugo binary from cache"; fi',
               'tar -zxf ${HUGO_BINARY_LOCAL} -C /usr/local/bin',
             ],
           },
@@ -162,17 +165,20 @@ export class HugoStack extends Stack {
           },
           post_build: {
             commands: [
-              'aws s3 sync --delete --no-progress ./public/ s3://${BUCKET_NAME}/${BUCKET_PATH}/',
               'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*"',
             ],
           },
+        },
+        artifacts: {
+          'name': 'staticPages',
+          'base-directory': 'public',
+          'files': ['**/*'],
         },
         cache: {
           paths: ['${HUGO_BINARY_LOCAL}'],
         },
       }),
     });
-    bucket.grantWrite(buildProject, `${hugoPublicBucketPath}/*`);
     buildProject.addToRolePolicy(createInvalidationStatement);
 
     const genEnglishArticleTask = new sfnTasks.LambdaInvoke(this, 'English Article', {
