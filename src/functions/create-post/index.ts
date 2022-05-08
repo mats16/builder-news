@@ -10,8 +10,8 @@ import Parser from 'rss-parser';
 import { CreateThumbnailInputPayload } from '../create-thumbnail';
 import { source } from './config';
 
-const hugoContentBucketName = process.env.HUGO_CONTENT_BUCKET_NAME!;
-const hugoContentBucketPath = process.env.HUGO_CONTENT_BUCKET_PATH || 'content';
+const bucketName = process.env.BUCKET_NAME!;
+const hugoContentPath = process.env.HUGO_CONTENT_PATH!;
 
 //const logger = new Logger();
 //const metrics = new Metrics();
@@ -130,7 +130,7 @@ export const handler: Handler = async (event: Event, _context) => {
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
   const urlPath = `headlines/${postDateString.replace(/-/g, '')}`;
-  const objectKey = `${hugoContentBucketPath}/${urlPath}/index.${lang}.md`;
+  const objectKey = `${hugoContentPath}/${urlPath}/index.${lang}.md`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
@@ -138,7 +138,7 @@ export const handler: Handler = async (event: Event, _context) => {
     isCJKLanguage: (lang == 'ja') ? true : false,
     title: postTitle,
     description: postDescription,
-    date: await getMetadata(hugoContentBucketName, objectKey, 'date') || executedDate.toISOString(),
+    date: await getMetadata(bucketName, objectKey, 'date') || executedDate.toISOString(),
     lastmod: executedDate.toISOString(),
     categories: ['news'],
     series: ['daily-aws'],
@@ -281,7 +281,7 @@ export const handler: Handler = async (event: Event, _context) => {
   }
 
   const putObjectCommand = new PutObjectCommand({
-    Bucket: hugoContentBucketName,
+    Bucket: bucketName,
     Key: objectKey,
     Body: mdBody.toMarkdown(),
     ContentType: 'text/markdown; charset=UTF-8',

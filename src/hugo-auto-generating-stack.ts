@@ -1,4 +1,4 @@
-import { Stack, StackProps, Duration } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, CfnOutput } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cf from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
@@ -33,8 +33,13 @@ export class HugoStack extends Stack {
 
     const hugoVersion = '0.98.0';
 
-    const hugoBucketPath = 'hugo';
-    const hugoContentBucketPath = `${hugoBucketPath}/content`;
+    const buildSourcePath = 'source';
+    const buildCachePath = 'cache';
+    const buildArtifactsPath = 'artifacts';
+
+    const artifactName = 'staticPages';
+
+    const hugoContentPath = `${buildSourcePath}/content`;
 
     const bucket = new s3.Bucket(this, 'Bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -44,7 +49,7 @@ export class HugoStack extends Stack {
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
       sources: [s3deploy.Source.asset('./hugo')],
       destinationBucket: bucket,
-      destinationKeyPrefix: `${hugoBucketPath}/`,
+      destinationKeyPrefix: `${buildSourcePath}/`,
       prune: false,
     });
 
@@ -60,7 +65,7 @@ export class HugoStack extends Stack {
       domainNames: (typeof customDomainNames == 'undefined') ? undefined : customDomainNames,
       certificate: (typeof acmArn == 'undefined') ? undefined : acm.Certificate.fromCertificateArn(this, 'Certificate', acmArn),
       defaultBehavior: {
-        origin: new S3Origin(bucket, { originPath: 'codebuild/artifacts/staticPages' }),
+        origin: new S3Origin(bucket, { originPath: `${buildArtifactsPath}/${artifactName}` }),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         functionAssociations: [
           {
@@ -76,55 +81,17 @@ export class HugoStack extends Stack {
       ],
     });
 
-    const createInvalidationStatement = new iam.PolicyStatement({
-      actions: ['cloudfront:CreateInvalidation'],
-      resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
-    });
-
-    const translateStatement = new iam.PolicyStatement({
-      actions: ['translate:TranslateText'],
-      resources: ['*'],
-    });
-
-    const createPostFunction = new NodejsFunction(this, 'CreatePostFunction', {
-      description: 'Create new post',
-      entry: './src/functions/create-post/index.ts',
-      handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_14_X,
-      architecture: lambda.Architecture.ARM_64,
-      timeout: Duration.minutes(3),
-      environment: {
-        POWERTOOLS_SERVICE_NAME: 'CreatePostFunction',
-        POWERTOOLS_METRICS_NAMESPACE: this.stackName,
-        POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
-        HUGO_CONTENT_BUCKET_NAME: bucket.bucketName,
-        HUGO_CONTENT_BUCKET_PATH: hugoContentBucketPath,
-      },
-      logRetention: logs.RetentionDays.ONE_WEEK,
-    });
-    bucket.grantReadWrite(createPostFunction, `${hugoContentBucketPath}/*.md`);
-    createPostFunction.addToRolePolicy(translateStatement);
-
-    const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
-      description: 'Create thumbnail image and put to S3',
-      code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/'),
-      architecture: lambda.Architecture.X86_64,
-      timeout: Duration.minutes(3),
-      environment: {
-        HUGO_CONTENT_BUCKET_NAME: bucket.bucketName,
-        HUGO_CONTENT_BUCKET_PATH: hugoContentBucketPath,
-      },
-      logRetention: logs.RetentionDays.ONE_WEEK,
-    });
-    bucket.grantRead(createThumbnailFunction, `${hugoBucketPath}/*.png`);
-    bucket.grantPut(createThumbnailFunction, `${hugoContentBucketPath}/*.png`);
+    //const createInvalidationStatement = new iam.PolicyStatement({
+    //  actions: ['cloudfront:CreateInvalidation'],
+    //  resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
+    //});
 
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
       HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
       HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
       HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
       HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-      DISTRIBUTION_ID: { value: cfDistribution.distributionId },
+      //DISTRIBUTION_ID: { value: cfDistribution.distributionId },
     };
     if (typeof hugoDisqusShortname == 'string') {
       buildEnvironmentVariables.HUGO_PARAMS_COMMENTS = { value: true };
@@ -138,16 +105,16 @@ export class HugoStack extends Stack {
       description: 'Hugo - Build static pages',
       source: codebuild.Source.s3({
         bucket: bucket,
-        path: `${hugoBucketPath}/`,
+        path: `${buildSourcePath}/`,
       }),
       artifacts: codebuild.Artifacts.s3({
         bucket: bucket,
-        path: 'codebuild/artifacts',
+        path: buildArtifactsPath,
         encryption: false,
         packageZip: false,
         includeBuildId: false,
       }),
-      cache: codebuild.Cache.bucket(bucket, { prefix: 'codebuild/chache' }),
+      cache: codebuild.Cache.bucket(bucket, { prefix: buildCachePath }),
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
       timeout: Duration.minutes(10),
       environmentVariables: buildEnvironmentVariables,
@@ -163,14 +130,14 @@ export class HugoStack extends Stack {
           build: {
             commands: ['hugo --buildDrafts'],
           },
-          post_build: {
-            commands: [
-              'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*"',
-            ],
-          },
+          //post_build: {
+          //  commands: [
+          //    'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*"',
+          //  ],
+          //},
         },
         artifacts: {
-          'name': 'staticPages',
+          'name': artifactName,
           'base-directory': 'public',
           'files': ['**/*'],
         },
@@ -179,10 +146,50 @@ export class HugoStack extends Stack {
         },
       }),
     });
-    buildProject.addToRolePolicy(createInvalidationStatement);
+    //buildProject.addToRolePolicy(createInvalidationStatement);
+
+    const translateStatement = new iam.PolicyStatement({
+      actions: ['translate:TranslateText'],
+      resources: ['*'],
+    });
+
+    const createArticleFunction = new NodejsFunction(this, 'CreateArticleFunction', {
+      description: 'Create new article',
+      entry: './src/functions/create-post/index.ts',
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_14_X,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: Duration.minutes(3),
+      environment: {
+        POWERTOOLS_SERVICE_NAME: 'CreateArticleFunction',
+        POWERTOOLS_METRICS_NAMESPACE: this.stackName,
+        POWERTOOLS_TRACER_CAPTURE_RESPONSE: 'false',
+        BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_PATH: hugoContentPath,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    bucket.grantReadWrite(createArticleFunction, `${hugoContentPath}/*.md`);
+    createArticleFunction.addToRolePolicy(translateStatement);
+
+    const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
+      description: 'Create thumbnail image and put to S3',
+      code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/'),
+      architecture: lambda.Architecture.X86_64,
+      timeout: Duration.minutes(3),
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+        HUGO_CONTENT_PATH: hugoContentPath,
+        ICON_PATH: `${buildSourcePath}/static/icons/icon-100.png`,
+        SITE_NAME: 'Daily AWS',
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    bucket.grantRead(createThumbnailFunction, `${buildSourcePath}/*.png`);
+    bucket.grantPut(createThumbnailFunction, `${hugoContentPath}/*.png`);
 
     const genEnglishArticleTask = new sfnTasks.LambdaInvoke(this, 'English Article', {
-      lambdaFunction: createPostFunction,
+      lambdaFunction: createArticleFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
         lang: 'en',
@@ -190,7 +197,7 @@ export class HugoStack extends Stack {
     });
 
     const genJapaneseArticleTask = new sfnTasks.LambdaInvoke(this, 'Japanese Article', {
-      lambdaFunction: createPostFunction,
+      lambdaFunction: createArticleFunction,
       payload: sfn.TaskInput.fromObject({
         input: sfn.JsonPath.entirePayload,
         lang: 'ja',
@@ -207,23 +214,40 @@ export class HugoStack extends Stack {
     });
     genJapaneseArticleTask.next(genJapaneseThumbnailTask);
 
-    const hugoBuildDeployTask = new sfnTasks.CodeBuildStartBuild(this, 'Hugo Build & Deploy', {
+    const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'Build static pages', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     });
 
-    const genArticleTask = new sfn.Parallel(this, 'Generate Article').branch(genJapaneseArticleTask).branch(genEnglishArticleTask);
-    genArticleTask.next(hugoBuildDeployTask);
+    const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'Cache invalidation', {
+      service: 'CloudFront',
+      action: 'createInvalidation',
+      parameters: {
+        DistributionId: cfDistribution.distributionId,
+        InvalidationBatch: {
+          'CallerReference.$': '$.SdkResponseMetadata.RequestId',
+          'Paths': {
+            Items: ['/*'],
+            Quantity: 1,
+          },
+        },
+      },
+      iamResources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
+      iamAction: 'cloudfront:CreateInvalidation',
+    });
 
-    const genArticleAndHugoBuild = new sfn.StateMachine(this, 'GenArticleAndHugoBuild', {
+    const genArticleTask = new sfn.Parallel(this, 'Generate Article').branch(genJapaneseArticleTask).branch(genEnglishArticleTask);
+    genArticleTask.next(buildStaticPagesTask).next(cacheInvalidationTask);
+
+    const dailyJob = new sfn.StateMachine(this, 'DailyJob', {
       definition: genArticleTask,
     });
 
     const weekday9amRule = new events.Rule(this, 'Weekday9amRule', {
       description: '[JST] 9AM Weekday',
-      schedule: events.Schedule.expression('cron(0 0 ? * MON-SAT *)'),
+      schedule: events.Schedule.expression('cron(0 0 ? * MON-FRI *)'),
     });
-    weekday9amRule.addTarget(new targets.SfnStateMachine(genArticleAndHugoBuild, {
+    weekday9amRule.addTarget(new targets.SfnStateMachine(dailyJob, {
       maxEventAge: Duration.hours(1),
       retryAttempts: 3,
       input: events.RuleTargetInput.fromObject({
@@ -236,7 +260,7 @@ export class HugoStack extends Stack {
       description: '[JST] 7AM Everyday - for Draft',
       schedule: events.Schedule.expression('cron(0 22 ? * * *)'),
     });
-    everyday7amRule.addTarget(new targets.SfnStateMachine(genArticleAndHugoBuild, {
+    everyday7amRule.addTarget(new targets.SfnStateMachine(dailyJob, {
       maxEventAge: Duration.hours(1),
       retryAttempts: 3,
       input: events.RuleTargetInput.fromObject({
@@ -245,23 +269,23 @@ export class HugoStack extends Stack {
       }),
     }));
 
-    const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChanedRule', {
-      description: 'Hugo config is changed',
-      eventPattern: {
-        source: ['aws.s3'],
-        detailType: ['Object Created'],
-        detail: {
-          bucket: {
-            name: [bucket.bucketName],
-          },
-          object: {
-            key: ['hugo/config.yml'],
-          },
-        },
-      },
-    });
-    hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
+    //const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChanedRule', {
+    //  description: 'Hugo config is changed',
+    //  eventPattern: {
+    //    source: ['aws.s3'],
+    //    detailType: ['Object Created'],
+    //    detail: {
+    //      bucket: {
+    //        name: [bucket.bucketName],
+    //      },
+    //      object: {
+    //        key: ['hugo/config.yml'],
+    //      },
+    //    },
+    //  },
+    //});
+    //hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
 
-    this.exportValue(`https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/`, { name: 'DailyAwsUrl' });
+    new CfnOutput(this, 'url', { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` });
   }
 }

@@ -11,8 +11,10 @@ export interface CreateThumbnailInputPayload {
   urlPath: string;
 };
 
-const hugoContentBucketName = process.env.HUGO_CONTENT_BUCKET_NAME!;
-const hugoContentBucketPath = process.env.HUGO_CONTENT_BUCKET_PATH || 'content';
+const bucketName = process.env.BUCKET_NAME!;
+const hugoContentPath = process.env.HUGO_CONTENT_PATH!;
+const iconPath = process.env.ICON_PATH!;
+const siteName = process.env.SITE_NAME!;
 
 const s3 = new S3Client({});
 
@@ -66,7 +68,7 @@ const genThumbnailImage = async (title: string, description: string, pubDateRang
   context.fillRect(48, 54, 1098, 514);
 
   // Icon
-  const cloudIcon = await getObject(hugoContentBucketName, 'hugo/static/icons/icon-100.png');
+  const cloudIcon = await getObject(bucketName, iconPath);
   await loadImage(cloudIcon).then(image => {
     context.drawImage(image, 960, 420, 120, 120);
   });
@@ -75,7 +77,7 @@ const genThumbnailImage = async (title: string, description: string, pubDateRang
   context.textBaseline = 'middle';
   context.fillStyle = '#000000';
   context.font = (lang == 'ja') ? 'bold 62pt NotoSansJP' : 'bold 62pt Arial';
-  context.fillText(`Daily AWS / ${title}`, 110, 180);
+  context.fillText(`${siteName} ${title}`, 110, 180);
 
   // Description
   context.fillStyle = '#000000';
@@ -98,6 +100,6 @@ export const handler: Handler = async (event, _context) => {
   const payload: CreateThumbnailInputPayload = event.Payload;
   const { title, description, pubDateRange, urlPath, lang } = payload;
   const thumbnailImage = await genThumbnailImage(title, description, pubDateRange, lang);
-  const objectKey = `${hugoContentBucketPath}/${urlPath}/thumbnail.${lang}.png`;
-  await putObject(hugoContentBucketName, objectKey, thumbnailImage);
+  const objectKey = `${hugoContentPath}/${urlPath}/thumbnail.${lang}.png`;
+  await putObject(bucketName, objectKey, thumbnailImage);
 };
