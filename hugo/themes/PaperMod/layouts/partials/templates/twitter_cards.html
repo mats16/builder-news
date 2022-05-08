@@ -26,7 +26,7 @@
 {{- end -}}
 {{- end }}
 {{- end }}
-<meta name="twitter:title" content="{{ .Title }}"/>
+<meta name="twitter:title" content="{{ .Title }} | {{ site.Title }}"/>
 <meta name="twitter:description" content="{{ with .Description }}{{ . }}{{ else }}{{if .IsPage}}{{ .Summary }}{{ else }}{{ with site.Params.description }}{{ . }}{{ end }}{{ end }}{{ end -}}"/>
 {{ with site.Social.twitter -}}
 <meta name="twitter:site" content="@{{ . }}"/>
