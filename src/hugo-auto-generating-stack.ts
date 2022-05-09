@@ -81,10 +81,12 @@ export class HugoStack extends Stack {
       ],
     });
 
+    const hugoBaseUrl = `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/`;
+
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
       HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
       HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
-      HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
+      HUGO_BASEURL: { value: hugoBaseUrl },
       HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
     };
     if (typeof hugoDisqusShortname == 'string') {
@@ -278,6 +280,6 @@ export class HugoStack extends Stack {
       }),
     }));
 
-    new CfnOutput(this, 'url', { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` });
+    new CfnOutput(this, 'url', { value: hugoBaseUrl });
   }
 }

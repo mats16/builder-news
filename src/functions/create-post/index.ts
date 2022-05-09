@@ -118,23 +118,19 @@ export const handler: Handler = async (event: Event, _context) => {
     ? `${oldestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ~ ${latestPubDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST)`
     : `${oldestPubDate.toLocaleString('en-US', { timeZone: 'UCT' })} ~ ${latestPubDate.toLocaleString('en-US', { timeZone: 'UTC' })} (UTC)`;
 
-  const postDateString = oldestPubDate.toISOString().split('T')[0];
-  const postTitle = postDateString;
-  //const postTitle = (lang == 'ja')
-  //  ? `Daily AWS ${postDateString}`
-  //  : `Daily AWS ${postDateString}`;
-  const postDescription = (lang == 'ja')
+  const articleTitle = oldestPubDate.toISOString().split('T')[0];
+  const articleDescription = (lang == 'ja')
     ? 'AWS関連のニュースヘッドライン'
     : 'AWS News Headlines';
-  const urlPath = `headlines/${postDateString.replace(/-/g, '')}`;
+  const urlPath = `headlines/${articleTitle.replace(/-/g, '')}`;
   const objectKey = `${hugoContentPath}/${urlPath}/index.${lang}.md`;
 
   // https://gohugo.io/content-management/front-matter/
   const frontMatter = {
     draft: isDraft,
     isCJKLanguage: (lang == 'ja') ? true : false,
-    title: postTitle,
-    description: postDescription,
+    title: articleTitle,
+    description: articleDescription,
     date: await getMetadata(bucketName, objectKey, 'date') || executedDate.toISOString(),
     lastmod: executedDate.toISOString(),
     categories: ['news'],
@@ -295,8 +291,8 @@ export const handler: Handler = async (event: Event, _context) => {
 
   const payload: CreateThumbnailInputPayload = {
     lang,
-    title: postTitle,
-    description: postDescription,
+    title: articleTitle,
+    description: articleDescription,
     pubDateRange,
     urlPath: urlPath,
   };
