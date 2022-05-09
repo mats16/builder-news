@@ -81,17 +81,11 @@ export class HugoStack extends Stack {
       ],
     });
 
-    //const createInvalidationStatement = new iam.PolicyStatement({
-    //  actions: ['cloudfront:CreateInvalidation'],
-    //  resources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
-    //});
-
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
       HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
       HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
       HUGO_BASEURL: { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` },
       HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
-      //DISTRIBUTION_ID: { value: cfDistribution.distributionId },
     };
     if (typeof hugoDisqusShortname == 'string') {
       buildEnvironmentVariables.HUGO_PARAMS_COMMENTS = { value: true };
@@ -130,11 +124,6 @@ export class HugoStack extends Stack {
           build: {
             commands: ['hugo --buildDrafts'],
           },
-          //post_build: {
-          //  commands: [
-          //    'aws cloudfront create-invalidation --distribution-id ${DISTRIBUTION_ID} --paths "/*"',
-          //  ],
-          //},
         },
         artifacts: {
           'name': artifactName,
@@ -146,7 +135,6 @@ export class HugoStack extends Stack {
         },
       }),
     });
-    //buildProject.addToRolePolicy(createInvalidationStatement);
 
     const translateStatement = new iam.PolicyStatement({
       actions: ['translate:TranslateText'],
@@ -188,38 +176,13 @@ export class HugoStack extends Stack {
     bucket.grantRead(createThumbnailFunction, `${buildSourcePath}/*.png`);
     bucket.grantPut(createThumbnailFunction, `${hugoContentPath}/*.png`);
 
-    const genEnglishArticleTask = new sfnTasks.LambdaInvoke(this, 'English Article', {
-      lambdaFunction: createArticleFunction,
-      payload: sfn.TaskInput.fromObject({
-        input: sfn.JsonPath.entirePayload,
-        lang: 'en',
-      }),
-    });
 
-    const genJapaneseArticleTask = new sfnTasks.LambdaInvoke(this, 'Japanese Article', {
-      lambdaFunction: createArticleFunction,
-      payload: sfn.TaskInput.fromObject({
-        input: sfn.JsonPath.entirePayload,
-        lang: 'ja',
-      }),
-    });
-
-    const genEnglisThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Englis Thumbnail', {
-      lambdaFunction: createThumbnailFunction,
-    });
-    genEnglishArticleTask.next(genEnglisThumbnailTask);
-
-    const genJapaneseThumbnailTask = new sfnTasks.LambdaInvoke(this, 'Japanese Thumbnail', {
-      lambdaFunction: createThumbnailFunction,
-    });
-    genJapaneseArticleTask.next(genJapaneseThumbnailTask);
-
-    const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'Build static pages', {
+    const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'BuildStaticPagesTask', {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     });
 
-    const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'Cache invalidation', {
+    const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'CacheInvalidation', {
       service: 'CloudFront',
       action: 'createInvalidation',
       parameters: {
@@ -236,11 +199,28 @@ export class HugoStack extends Stack {
       iamAction: 'cloudfront:CreateInvalidation',
     });
 
-    const genArticleTask = new sfn.Parallel(this, 'Generate Article').branch(genJapaneseArticleTask).branch(genEnglishArticleTask);
-    genArticleTask.next(buildStaticPagesTask).next(cacheInvalidationTask);
+    const createArticleTask = new sfnTasks.LambdaInvoke(this, 'CreateArticle', {
+      lambdaFunction: createArticleFunction,
+    });
+
+    const createThumbnailTask = new sfnTasks.LambdaInvoke(this, 'CreateThumbnail', {
+      lambdaFunction: createThumbnailFunction,
+    });
+    createArticleTask.next(createThumbnailTask);
+
+    const createMutiLangArticleTask = new sfn.Map(this, 'createMutiLangArticle', {
+      itemsPath: sfn.JsonPath.stringAt('$.lang'),
+      parameters: {
+        'time.$': '$.time',
+        'isDraft.$': '$.isDraft',
+        'lang.$': '$$.Map.Item.Value',
+      },
+    });
+    createMutiLangArticleTask.iterator(createArticleTask);
+    createMutiLangArticleTask.next(buildStaticPagesTask).next(cacheInvalidationTask);
 
     const dailyJob = new sfn.StateMachine(this, 'DailyJob', {
-      definition: genArticleTask,
+      definition: createMutiLangArticleTask,
     });
 
     const weekday9amRule = new events.Rule(this, 'Weekday9amRule', {
@@ -253,6 +233,7 @@ export class HugoStack extends Stack {
       input: events.RuleTargetInput.fromObject({
         time: events.EventField.time,
         isDraft: false,
+        lang: ['ja', 'en'],
       }),
     }));
 
@@ -266,25 +247,32 @@ export class HugoStack extends Stack {
       input: events.RuleTargetInput.fromObject({
         time: events.EventField.time,
         isDraft: true,
+        lang: ['ja', 'en'],
       }),
     }));
 
-    //const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChanedRule', {
-    //  description: 'Hugo config is changed',
-    //  eventPattern: {
-    //    source: ['aws.s3'],
-    //    detailType: ['Object Created'],
-    //    detail: {
-    //      bucket: {
-    //        name: [bucket.bucketName],
-    //      },
-    //      object: {
-    //        key: ['hugo/config.yml'],
-    //      },
-    //    },
-    //  },
-    //});
-    //hugoConfigChanedRule.addTarget(new targets.CodeBuildProject(buildProject));
+    const hugoConfigChanedRule = new events.Rule(this, 'HugoConfigChanedRule', {
+      description: 'Hugo config is changed',
+      eventPattern: {
+        source: ['aws.s3'],
+        detailType: ['Object Created'],
+        detail: {
+          bucket: {
+            name: [bucket.bucketName],
+          },
+          object: {
+            key: [`${buildSourcePath}/config.yml`],
+          },
+        },
+      },
+    });
+    hugoConfigChanedRule.addTarget(new targets.SfnStateMachine(dailyJob, {
+      maxEventAge: Duration.hours(1),
+      retryAttempts: 3,
+      input: events.RuleTargetInput.fromObject({
+        lang: [], // Only build
+      }),
+    }));
 
     new CfnOutput(this, 'url', { value: `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/` });
   }
