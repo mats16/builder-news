@@ -96,7 +96,7 @@ export class HugoStack extends Stack {
     };
 
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
-      description: 'Hugo - Build static pages',
+      description: 'Build static pages with Hugo',
       source: codebuild.Source.s3({
         bucket: bucket,
         path: `${buildSourcePath}/`,
@@ -178,11 +178,13 @@ export class HugoStack extends Stack {
 
 
     const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'BuildStaticPagesTask', {
+      comment: 'Build static pages with Hugo',
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     });
 
-    const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'CacheInvalidation', {
+    const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'CacheInvalidationTask', {
+      comment: 'Send invalidation to CloudFront (CDN)',
       service: 'CloudFront',
       action: 'createInvalidation',
       parameters: {
@@ -199,16 +201,18 @@ export class HugoStack extends Stack {
       iamAction: 'cloudfront:CreateInvalidation',
     });
 
-    const createArticleTask = new sfnTasks.LambdaInvoke(this, 'CreateArticle', {
+    const createArticleTask = new sfnTasks.LambdaInvoke(this, 'CreateArticleTask', {
+      comment: 'Create content for Hugo',
       lambdaFunction: createArticleFunction,
     });
 
-    const createThumbnailTask = new sfnTasks.LambdaInvoke(this, 'CreateThumbnail', {
+    const createThumbnailTask = new sfnTasks.LambdaInvoke(this, 'CreateThumbnailTask', {
+      comment: 'Create thumbnail image for Hugo',
       lambdaFunction: createThumbnailFunction,
     });
     createArticleTask.next(createThumbnailTask);
 
-    const createMutiLangArticleTask = new sfn.Map(this, 'createMutiLangArticle', {
+    const createMutiLangArticleTask = new sfn.Map(this, 'CreateMutiLangArticleTask', {
       itemsPath: sfn.JsonPath.stringAt('$.lang'),
       parameters: {
         'time.$': '$.time',
