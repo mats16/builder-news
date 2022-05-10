@@ -145,7 +145,7 @@ export class HugoStack extends Stack {
 
     const createArticleFunction = new NodejsFunction(this, 'CreateArticleFunction', {
       description: 'Create new article',
-      entry: './src/functions/create-post/index.ts',
+      entry: './src/functions/create-article/index.ts',
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_14_X,
       architecture: lambda.Architecture.ARM_64,
