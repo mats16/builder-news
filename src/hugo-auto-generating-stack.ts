@@ -178,12 +178,11 @@ export class HugoStack extends Stack {
     bucket.grantRead(createThumbnailFunction, `${buildSourcePath}/*.png`);
     bucket.grantPut(createThumbnailFunction, `${hugoContentPath}/*.png`);
 
-
     const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'BuildStaticPagesTask', {
       comment: 'Build static pages with Hugo',
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
-    });
+    }).addRetry({ maxAttempts: 1 });
 
     const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'CacheInvalidationTask', {
       comment: 'Send invalidation to CloudFront (CDN)',
@@ -201,7 +200,7 @@ export class HugoStack extends Stack {
       },
       iamResources: [`arn:aws:cloudfront::${this.account}:distribution/${cfDistribution.distributionId}`],
       iamAction: 'cloudfront:CreateInvalidation',
-    });
+    }).addRetry({ maxAttempts: 3 });
 
     const createArticleTask = new sfnTasks.LambdaInvoke(this, 'CreateArticleTask', {
       comment: 'Create content for Hugo',
