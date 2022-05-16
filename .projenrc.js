@@ -1,6 +1,6 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
-  cdkVersion: '2.23.0',
+  cdkVersion: '2.24.1',
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [
@@ -16,6 +16,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     'markdown-doc-builder@1.3.0',
     'node-fetch',
     'rss-parser@3.12.0',
+    'twitter-api-v2@1.12.0',
   ],
   devDeps: [
     '@types/bluebird',
