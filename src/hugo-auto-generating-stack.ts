@@ -147,7 +147,7 @@ export class HugoStack extends Stack {
       description: 'Create new article',
       entry: './src/functions/create-article/index.ts',
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: lambda.Runtime.NODEJS_16_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(3),
       environment: {
