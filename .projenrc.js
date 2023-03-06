@@ -1,25 +1,23 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
-  cdkVersion: '2.24.1',
+  cdkVersion: '2.67.0',
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [
-    '@aws-lambda-powertools/commons',
-    '@aws-lambda-powertools/logger',
-    '@aws-lambda-powertools/metrics',
-    '@aws-lambda-powertools/tracer',
+    '@aws-lambda-powertools/commons@1.6.0',
+    '@aws-lambda-powertools/logger@1.6.0',
+    '@aws-lambda-powertools/metrics@1.6.0',
+    '@aws-lambda-powertools/tracer@1.6.0',
     '@aws-sdk/client-s3',
     '@aws-sdk/client-translate',
     '@types/aws-lambda',
     'bluebird@3.7.2',
-    'canvas@2.9.1',
     'markdown-doc-builder@1.3.0',
-    'node-fetch',
     'rss-parser@3.12.0',
-    'twitter-api-v2@1.12.0',
   ],
   devDeps: [
     '@types/bluebird',
+    'canvas@2.11.0',
   ],
   gitignore: [
     'hugo/public',

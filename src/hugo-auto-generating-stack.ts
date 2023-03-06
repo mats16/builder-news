@@ -3,6 +3,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cf from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -53,6 +54,7 @@ export class HugoStack extends Stack {
       prune: false,
     });
 
+    /** URL を書き換える CloudFront Function */
     const urlRewriteFunction = new cf.Function(this, 'UrlRewriteFunction', {
       comment: 'URL rewrite to append index.html to the URI',
       code: cf.FunctionCode.fromFile({
@@ -60,6 +62,7 @@ export class HugoStack extends Stack {
       }),
     });
 
+    /** CloudFront Distribution */
     const cfDistribution = new cf.Distribution(this, 'Distribution', {
       comment: 'Daily AWS',
       domainNames: (typeof customDomainNames == 'undefined') ? undefined : customDomainNames,
@@ -83,6 +86,7 @@ export class HugoStack extends Stack {
 
     const hugoBaseUrl = `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/`;
 
+    /** CodeBuild の環境変数 */
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
       HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
       HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
@@ -97,6 +101,7 @@ export class HugoStack extends Stack {
       buildEnvironmentVariables.HUGO_GOOGLEANALYTICS = { value: hugoGoogleAnalytics };
     };
 
+    /** CodeBuild の build project */
     const buildProject = new codebuild.Project(this, 'BuildStaticPages', {
       description: 'Build static pages with Hugo',
       source: codebuild.Source.s3({
@@ -111,7 +116,7 @@ export class HugoStack extends Stack {
         includeBuildId: false,
       }),
       cache: codebuild.Cache.bucket(bucket, { prefix: buildCachePath }),
-      environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_5_0 },
+      environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_6_0 },
       timeout: Duration.minutes(10),
       environmentVariables: buildEnvironmentVariables,
       buildSpec: codebuild.BuildSpec.fromObject({
@@ -138,16 +143,18 @@ export class HugoStack extends Stack {
       }),
     });
 
+    /** Amazon Translate 用の IAM Policy */
     const translateStatement = new iam.PolicyStatement({
       actions: ['translate:TranslateText'],
       resources: ['*'],
     });
 
+    /** 記事の Markdown を生成する Lambda Function */
     const createArticleFunction = new NodejsFunction(this, 'CreateArticleFunction', {
       description: 'Create new article',
       entry: './src/functions/create-article/index.ts',
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_18_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(3),
       environment: {
@@ -159,12 +166,15 @@ export class HugoStack extends Stack {
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
+    /** S3 への書き込み権限を付与 */
     bucket.grantReadWrite(createArticleFunction, `${hugoContentPath}/*.md`);
+    /** Amazon Translate の実行権限を付与 */
     createArticleFunction.addToRolePolicy(translateStatement);
 
+    /** サムネイル画像を生成する Lambda Function */
     const createThumbnailFunction = new lambda.DockerImageFunction(this, 'CreateThumbnailFunction', {
       description: 'Create thumbnail image and put to S3',
-      code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/'),
+      code: lambda.DockerImageCode.fromImageAsset('./src/functions/create-thumbnail/', { platform: Platform.LINUX_AMD64 }),
       architecture: lambda.Architecture.X86_64,
       timeout: Duration.minutes(3),
       environment: {
@@ -175,15 +185,19 @@ export class HugoStack extends Stack {
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
+    /** ベース画像の読み取り権限を付与 */
     bucket.grantRead(createThumbnailFunction, `${buildSourcePath}/*.png`);
+    /** S3 への書き込み権限を付与 */
     bucket.grantPut(createThumbnailFunction, `${hugoContentPath}/*.png`);
 
+    /** CodeBuild の SFn Task */
     const buildStaticPagesTask = new sfnTasks.CodeBuildStartBuild(this, 'BuildStaticPagesTask', {
       comment: 'Build static pages with Hugo',
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       project: buildProject,
     }).addRetry({ maxAttempts: 1 });
 
+    /** CDN のキャッシュを無効化する SFn Task */
     const cacheInvalidationTask = new sfnTasks.CallAwsService(this, 'CacheInvalidationTask', {
       comment: 'Send invalidation to CloudFront (CDN)',
       service: 'CloudFront',
@@ -202,17 +216,20 @@ export class HugoStack extends Stack {
       iamAction: 'cloudfront:CreateInvalidation',
     }).addRetry({ maxAttempts: 3 });
 
+    /** 記事を作成する SFn Task */
     const createArticleTask = new sfnTasks.LambdaInvoke(this, 'CreateArticleTask', {
       comment: 'Create content for Hugo',
       lambdaFunction: createArticleFunction,
     });
 
+    /** サムネイル画像を作成する SFn Task */
     const createThumbnailTask = new sfnTasks.LambdaInvoke(this, 'CreateThumbnailTask', {
       comment: 'Create thumbnail image for Hugo',
       lambdaFunction: createThumbnailFunction,
     });
     createArticleTask.next(createThumbnailTask);
 
+    /** 多言語記事を作成する SFn Task */
     const createMutiLangArticleTask = new sfn.Map(this, 'CreateMutiLangArticleTask', {
       itemsPath: sfn.JsonPath.stringAt('$.lang'),
       parameters: {
@@ -224,10 +241,12 @@ export class HugoStack extends Stack {
     createMutiLangArticleTask.iterator(createArticleTask);
     createMutiLangArticleTask.next(buildStaticPagesTask).next(cacheInvalidationTask);
 
+    /** 毎日記事を作成する StateMachine */
     const dailyJob = new sfn.StateMachine(this, 'DailyJob', {
       definition: createMutiLangArticleTask,
     });
 
+    /** 平日９時に記事を生成するルール */
     const weekday9amRule = new events.Rule(this, 'Weekday9amRule', {
       description: '[JST] 9AM Weekday',
       schedule: events.Schedule.expression('cron(0 0 ? * MON-FRI *)'),
@@ -242,6 +261,7 @@ export class HugoStack extends Stack {
       }),
     }));
 
+    /** 毎日７時に速報版の記事を生成するルール */
     const everyday7amRule = new events.Rule(this, 'Everyday7amRule', {
       description: '[JST] 7AM Everyday - for Draft',
       schedule: events.Schedule.expression('cron(0 22 ? * * *)'),

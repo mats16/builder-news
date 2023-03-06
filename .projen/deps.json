@@ -25,7 +25,12 @@
     },
     {
       "name": "aws-cdk",
-      "version": "^2.24.1",
+      "version": "^2.67.0",
+      "type": "build"
+    },
+    {
+      "name": "canvas",
+      "version": "2.11.0",
       "type": "build"
     },
     {
@@ -86,18 +91,22 @@
     },
     {
       "name": "@aws-lambda-powertools/commons",
+      "version": "1.6.0",
       "type": "runtime"
     },
     {
       "name": "@aws-lambda-powertools/logger",
+      "version": "1.6.0",
       "type": "runtime"
     },
     {
       "name": "@aws-lambda-powertools/metrics",
+      "version": "1.6.0",
       "type": "runtime"
     },
     {
       "name": "@aws-lambda-powertools/tracer",
+      "version": "1.6.0",
       "type": "runtime"
     },
     {
@@ -114,17 +123,12 @@
     },
     {
       "name": "aws-cdk-lib",
-      "version": "^2.24.1",
+      "version": "^2.67.0",
       "type": "runtime"
     },
     {
       "name": "bluebird",
       "version": "3.7.2",
-      "type": "runtime"
-    },
-    {
-      "name": "canvas",
-      "version": "2.9.1",
       "type": "runtime"
     },
     {
@@ -138,17 +142,8 @@
       "type": "runtime"
     },
     {
-      "name": "node-fetch",
-      "type": "runtime"
-    },
-    {
       "name": "rss-parser",
       "version": "3.12.0",
-      "type": "runtime"
-    },
-    {
-      "name": "twitter-api-v2",
-      "version": "1.12.0",
       "type": "runtime"
     }
   ],
