@@ -22,6 +22,9 @@ Object {
       "ap-south-1": Object {
         "states": "states.ap-south-1.amazonaws.com",
       },
+      "ap-south-2": Object {
+        "states": "states.ap-south-2.amazonaws.com",
+      },
       "ap-southeast-1": Object {
         "states": "states.ap-southeast-1.amazonaws.com",
       },
@@ -43,6 +46,9 @@ Object {
       "eu-central-1": Object {
         "states": "states.eu-central-1.amazonaws.com",
       },
+      "eu-central-2": Object {
+        "states": "states.eu-central-2.amazonaws.com",
+      },
       "eu-north-1": Object {
         "states": "states.eu-north-1.amazonaws.com",
       },
@@ -60,6 +66,9 @@ Object {
       },
       "eu-west-3": Object {
         "states": "states.eu-west-3.amazonaws.com",
+      },
+      "me-central-1": Object {
+        "states": "states.me-central-1.amazonaws.com",
       },
       "me-south-1": Object {
         "states": "states.me-south-1.amazonaws.com",
@@ -97,10 +106,7 @@ Object {
     },
   },
   "Outputs": Object {
-    "ExportDailyAwsUrl": Object {
-      "Export": Object {
-        "Name": "DailyAwsUrl",
-      },
+    "url": Object {
       "Value": Object {
         "Fn::Join": Array [
           "",
@@ -140,7 +146,7 @@ Object {
         },
         "Tags": Array [
           Object {
-            "Key": "aws-cdk:cr-owned:hugo/:69b200d3",
+            "Key": "aws-cdk:cr-owned:source/:69b200d3",
             "Value": "true",
           },
         ],
@@ -283,7 +289,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             "Arn",
           ],
         },
-        "Runtime": "python3.7",
+        "Runtime": "python3.9",
         "Timeout": 300,
       },
       "Type": "AWS::Lambda::Function",
@@ -382,7 +388,15 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     "BuildStaticPages05E1D87F": Object {
       "Properties": Object {
         "Artifacts": Object {
-          "Type": "NO_ARTIFACTS",
+          "EncryptionDisabled": true,
+          "Location": Object {
+            "Ref": "Bucket83908E77",
+          },
+          "NamespaceType": "NONE",
+          "OverrideArtifactName": true,
+          "Packaging": "NONE",
+          "Path": "artifacts",
+          "Type": "S3",
         },
         "Cache": Object {
           "Location": Object {
@@ -392,22 +406,17 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 Object {
                   "Ref": "Bucket83908E77",
                 },
-                "codebuild-chache",
+                "cache",
               ],
             ],
           },
           "Type": "S3",
         },
-        "Description": "Hugo - Build static pages",
+        "Description": "Build static pages with Hugo",
         "EncryptionKey": "alias/aws/s3",
         "Environment": Object {
           "ComputeType": "BUILD_GENERAL1_SMALL",
           "EnvironmentVariables": Array [
-            Object {
-              "Name": "HUGO_VERSION",
-              "Type": "PLAINTEXT",
-              "Value": "0.98.0",
-            },
             Object {
               "Name": "HUGO_BINARY_URL",
               "Type": "PLAINTEXT",
@@ -442,27 +451,8 @@ def submit_response(event: dict, context, response_status: str, error_message: s
               "Type": "PLAINTEXT",
               "Value": "development",
             },
-            Object {
-              "Name": "BUCKET_NAME",
-              "Type": "PLAINTEXT",
-              "Value": Object {
-                "Ref": "Bucket83908E77",
-              },
-            },
-            Object {
-              "Name": "BUCKET_PATH",
-              "Type": "PLAINTEXT",
-              "Value": "hugo/public",
-            },
-            Object {
-              "Name": "DISTRIBUTION_ID",
-              "Type": "PLAINTEXT",
-              "Value": Object {
-                "Ref": "Distribution830FAC52",
-              },
-            },
           ],
-          "Image": "aws/codebuild/standard:5.0",
+          "Image": "aws/codebuild/standard:6.0",
           "ImagePullCredentialsType": "CODEBUILD",
           "PrivilegedMode": false,
           "Type": "LINUX_CONTAINER",
@@ -479,7 +469,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
   \\"phases\\": {
     \\"install\\": {
       \\"commands\\": [
-        \\"if [ ! -e \${HUGO_BINARY_LOCAL} ] ;then curl -L \${HUGO_BINARY_URL} -o /tmp/hugo_\${HUGO_VERSION}.tar.gz; else echo \\\\\\"get hugo binary from cache\\\\\\"; fi\\",
+        \\"if [ ! -e \${HUGO_BINARY_LOCAL} ] ;then curl -L \${HUGO_BINARY_URL} -o \${HUGO_BINARY_LOCAL}; else echo \\\\\\"get hugo binary from cache\\\\\\"; fi\\",
         \\"tar -zxf \${HUGO_BINARY_LOCAL} -C /usr/local/bin\\"
       ]
     },
@@ -487,13 +477,14 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       \\"commands\\": [
         \\"hugo --buildDrafts\\"
       ]
-    },
-    \\"post_build\\": {
-      \\"commands\\": [
-        \\"aws s3 sync --delete --no-progress ./public/ s3://\${BUCKET_NAME}/\${BUCKET_PATH}/\\",
-        \\"aws cloudfront create-invalidation --distribution-id \${DISTRIBUTION_ID} --paths \\\\\\"/*\\\\\\"\\"
-      ]
     }
+  },
+  \\"artifacts\\": {
+    \\"name\\": \\"staticPages\\",
+    \\"base-directory\\": \\"public\\",
+    \\"files\\": [
+      \\"**/*\\"
+    ]
   },
   \\"cache\\": {
     \\"paths\\": [
@@ -508,7 +499,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 Object {
                   "Ref": "Bucket83908E77",
                 },
-                "/hugo/",
+                "/source/",
               ],
             ],
           },
@@ -517,49 +508,6 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         "TimeoutInMinutes": 10,
       },
       "Type": "AWS::CodeBuild::Project",
-    },
-    "BuildStaticPagesEventsRole9EC715D4": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": "events.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "BuildStaticPagesEventsRoleDefaultPolicy74C2E5F5": Object {
-      "Properties": Object {
-        "PolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "codebuild:StartBuild",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::GetAtt": Array [
-                  "BuildStaticPages05E1D87F",
-                  "Arn",
-                ],
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "BuildStaticPagesEventsRoleDefaultPolicy74C2E5F5",
-        "Roles": Array [
-          Object {
-            "Ref": "BuildStaticPagesEventsRole9EC715D4",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
     },
     "BuildStaticPagesRole2D55B063": Object {
       "Properties": Object {
@@ -606,7 +554,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                           "Arn",
                         ],
                       },
-                      "/hugo/",
+                      "/source/",
                     ],
                   ],
                 },
@@ -740,59 +688,6 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 ],
               },
             },
-            Object {
-              "Action": Array [
-                "s3:DeleteObject*",
-                "s3:PutObject",
-                "s3:PutObjectLegalHold",
-                "s3:PutObjectRetention",
-                "s3:PutObjectTagging",
-                "s3:PutObjectVersionTagging",
-                "s3:Abort*",
-              ],
-              "Effect": "Allow",
-              "Resource": Array [
-                Object {
-                  "Fn::GetAtt": Array [
-                    "Bucket83908E77",
-                    "Arn",
-                  ],
-                },
-                Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      Object {
-                        "Fn::GetAtt": Array [
-                          "Bucket83908E77",
-                          "Arn",
-                        ],
-                      },
-                      "/hugo/public/*",
-                    ],
-                  ],
-                },
-              ],
-            },
-            Object {
-              "Action": "cloudfront:CreateInvalidation",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    "arn:aws:cloudfront::",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":distribution/",
-                    Object {
-                      "Ref": "Distribution830FAC52",
-                    },
-                  ],
-                ],
-              },
-            },
           ],
           "Version": "2012-10-17",
         },
@@ -805,10 +700,10 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       },
       "Type": "AWS::IAM::Policy",
     },
-    "CreatePostFunction56510812": Object {
+    "CreateArticleFunction0DB5B447": Object {
       "DependsOn": Array [
-        "CreatePostFunctionServiceRoleDefaultPolicyD597A210",
-        "CreatePostFunctionServiceRoleCAC21E42",
+        "CreateArticleFunctionServiceRoleDefaultPolicy98A01F5E",
+        "CreateArticleFunctionServiceRoleC3DCFA1F",
       ],
       "Properties": Object {
         "Architectures": Array [
@@ -818,34 +713,34 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "a3cb5a052051a1f3f87e2befe59566553577183424cf4b437775595ea8b0c4c8.zip",
+          "S3Key": "e9154d5ae196b164d27511f7d5e5290f4467218324238d9bd9146719a10f8591.zip",
         },
-        "Description": "Create new post",
+        "Description": "Create new article",
         "Environment": Object {
           "Variables": Object {
             "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
-            "HUGO_CONTENT_BUCKET_NAME": Object {
+            "BUCKET_NAME": Object {
               "Ref": "Bucket83908E77",
             },
-            "HUGO_CONTENT_BUCKET_PATH": "hugo/content",
+            "HUGO_CONTENT_PATH": "source/content",
             "POWERTOOLS_METRICS_NAMESPACE": "test",
-            "POWERTOOLS_SERVICE_NAME": "CreatePostFunction",
+            "POWERTOOLS_SERVICE_NAME": "CreateArticleFunction",
             "POWERTOOLS_TRACER_CAPTURE_RESPONSE": "false",
           },
         },
         "Handler": "index.handler",
         "Role": Object {
           "Fn::GetAtt": Array [
-            "CreatePostFunctionServiceRoleCAC21E42",
+            "CreateArticleFunctionServiceRoleC3DCFA1F",
             "Arn",
           ],
         },
-        "Runtime": "nodejs14.x",
+        "Runtime": "nodejs18.x",
         "Timeout": 180,
       },
       "Type": "AWS::Lambda::Function",
     },
-    "CreatePostFunctionLogRetention0EFA5AE2": Object {
+    "CreateArticleFunctionLogRetentionB8256719": Object {
       "Properties": Object {
         "LogGroupName": Object {
           "Fn::Join": Array [
@@ -853,7 +748,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             Array [
               "/aws/lambda/",
               Object {
-                "Ref": "CreatePostFunction56510812",
+                "Ref": "CreateArticleFunction0DB5B447",
               },
             ],
           ],
@@ -868,7 +763,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       },
       "Type": "Custom::LogRetention",
     },
-    "CreatePostFunctionServiceRoleCAC21E42": Object {
+    "CreateArticleFunctionServiceRoleC3DCFA1F": Object {
       "Properties": Object {
         "AssumeRolePolicyDocument": Object {
           "Statement": Array [
@@ -899,7 +794,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       },
       "Type": "AWS::IAM::Role",
     },
-    "CreatePostFunctionServiceRoleDefaultPolicyD597A210": Object {
+    "CreateArticleFunctionServiceRoleDefaultPolicy98A01F5E": Object {
       "Properties": Object {
         "PolicyDocument": Object {
           "Statement": Array [
@@ -934,7 +829,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                           "Arn",
                         ],
                       },
-                      "/hugo/content/*.md",
+                      "/source/content/*.md",
                     ],
                   ],
                 },
@@ -948,10 +843,10 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "CreatePostFunctionServiceRoleDefaultPolicyD597A210",
+        "PolicyName": "CreateArticleFunctionServiceRoleDefaultPolicy98A01F5E",
         "Roles": Array [
           Object {
-            "Ref": "CreatePostFunctionServiceRoleCAC21E42",
+            "Ref": "CreateArticleFunctionServiceRoleC3DCFA1F",
           },
         ],
       },
@@ -968,16 +863,18 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         ],
         "Code": Object {
           "ImageUri": Object {
-            "Fn::Sub": "\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}:449caba5d15139912c518855cb00d250db88b10218cb04a82fd349a5c5db5a98",
+            "Fn::Sub": "\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}:8a8737dbceca101b824584f5a3c193ef7defc7a5e4ff2b1a5f5a75e76e66baf1",
           },
         },
         "Description": "Create thumbnail image and put to S3",
         "Environment": Object {
           "Variables": Object {
-            "HUGO_CONTENT_BUCKET_NAME": Object {
+            "BUCKET_NAME": Object {
               "Ref": "Bucket83908E77",
             },
-            "HUGO_CONTENT_BUCKET_PATH": "hugo/content",
+            "HUGO_CONTENT_PATH": "source/content",
+            "ICON_PATH": "source/static/icons/icon-100.png",
+            "SITE_NAME": "Daily AWS",
           },
         },
         "PackageType": "Image",
@@ -1073,7 +970,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                           "Arn",
                         ],
                       },
-                      "/hugo/*.png",
+                      "/source/*.png",
                     ],
                   ],
                 },
@@ -1099,7 +996,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                         "Arn",
                       ],
                     },
-                    "/hugo/content/*.png",
+                    "/source/content/*.png",
                   ],
                 ],
               },
@@ -1126,7 +1023,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "f98b78092dcdd31f5e6d47489beb5f804d4835ef86a8085d0a2053cb9ae711da.zip",
+          "S3Key": "2bc265c5e0569aeb24a6349c15bd54e76e845892376515e036627ab0cc70bb64.zip",
         },
         "Handler": "index.handler",
         "Layers": Array [
@@ -1140,7 +1037,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             "Arn",
           ],
         },
-        "Runtime": "python3.7",
+        "Runtime": "python3.9",
         "Timeout": 900,
       },
       "Type": "AWS::Lambda::Function",
@@ -1270,13 +1167,271 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       },
       "Type": "AWS::IAM::Policy",
     },
+    "DailyJobEventsRoleC77D9BF1": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "events.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "DailyJobEventsRoleDefaultPolicy8EA7B0FF": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Ref": "DailyJobFDEAA19A",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "DailyJobEventsRoleDefaultPolicy8EA7B0FF",
+        "Roles": Array [
+          Object {
+            "Ref": "DailyJobEventsRoleC77D9BF1",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "DailyJobFDEAA19A": Object {
+      "DeletionPolicy": "Delete",
+      "DependsOn": Array [
+        "DailyJobRoleDefaultPolicy9809F6C3",
+        "DailyJobRoleBE46B757",
+      ],
+      "Properties": Object {
+        "DefinitionString": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "{\\"StartAt\\":\\"CreateMutiLangArticleTask\\",\\"States\\":{\\"CreateMutiLangArticleTask\\":{\\"Type\\":\\"Map\\",\\"Next\\":\\"BuildStaticPagesTask\\",\\"Parameters\\":{\\"time.$\\":\\"$.time\\",\\"isDraft.$\\":\\"$.isDraft\\",\\"lang.$\\":\\"$$.Map.Item.Value\\"},\\"Iterator\\":{\\"StartAt\\":\\"CreateArticleTask\\",\\"States\\":{\\"CreateArticleTask\\":{\\"Next\\":\\"CreateThumbnailTask\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create content for Hugo\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
+              Object {
+                "Fn::GetAtt": Array [
+                  "CreateArticleFunction0DB5B447",
+                  "Arn",
+                ],
+              },
+              "\\",\\"Payload.$\\":\\"$\\"}},\\"CreateThumbnailTask\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create thumbnail image for Hugo\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
+              Object {
+                "Fn::GetAtt": Array [
+                  "CreateThumbnailFunction0A22F1F7",
+                  "Arn",
+                ],
+              },
+              "\\",\\"Payload.$\\":\\"$\\"}}}},\\"ItemsPath\\":\\"$.lang\\"},\\"BuildStaticPagesTask\\":{\\"Next\\":\\"CacheInvalidationTask\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"States.ALL\\"],\\"MaxAttempts\\":1}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Build static pages with Hugo\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::codebuild:startBuild.sync\\",\\"Parameters\\":{\\"ProjectName\\":\\"",
+              Object {
+                "Ref": "BuildStaticPages05E1D87F",
+              },
+              "\\"}},\\"CacheInvalidationTask\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"States.ALL\\"],\\"MaxAttempts\\":3}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Send invalidation to CloudFront (CDN)\\",\\"Resource\\":\\"arn:",
+              Object {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::aws-sdk:cloudfront:createInvalidation\\",\\"Parameters\\":{\\"DistributionId\\":\\"",
+              Object {
+                "Ref": "Distribution830FAC52",
+              },
+              "\\",\\"InvalidationBatch\\":{\\"CallerReference.$\\":\\"$.SdkResponseMetadata.RequestId\\",\\"Paths\\":{\\"Items\\":[\\"/*\\"],\\"Quantity\\":1}}}}}}",
+            ],
+          ],
+        },
+        "RoleArn": Object {
+          "Fn::GetAtt": Array [
+            "DailyJobRoleBE46B757",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::StepFunctions::StateMachine",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "DailyJobRoleBE46B757": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": Object {
+                  "Fn::FindInMap": Array [
+                    "ServiceprincipalMap",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    "states",
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "DailyJobRoleDefaultPolicy9809F6C3": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "codebuild:StartBuild",
+                "codebuild:StopBuild",
+                "codebuild:BatchGetBuilds",
+                "codebuild:BatchGetReports",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::GetAtt": Array [
+                  "BuildStaticPages05E1D87F",
+                  "Arn",
+                ],
+              },
+            },
+            Object {
+              "Action": Array [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule",
+              ],
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":events:",
+                    Object {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":rule/StepFunctionsGetEventForCodeBuildStartBuildRule",
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": "cloudfront:CreateInvalidation",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:aws:cloudfront::",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":distribution/",
+                    Object {
+                      "Ref": "Distribution830FAC52",
+                    },
+                  ],
+                ],
+              },
+            },
+            Object {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "CreateArticleFunction0DB5B447",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "CreateArticleFunction0DB5B447",
+                          "Arn",
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            Object {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "CreateThumbnailFunction0A22F1F7",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "CreateThumbnailFunction0A22F1F7",
+                          "Arn",
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "DailyJobRoleDefaultPolicy9809F6C3",
+        "Roles": Array [
+          Object {
+            "Ref": "DailyJobRoleBE46B757",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
     "DeployWebsiteAwsCliLayer17DBC421": Object {
       "Properties": Object {
         "Content": Object {
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "50336bec1c378b6b89cb429265ea84d9df45193d8a0a501e3c7b6794aec3ae17.zip",
+          "S3Key": "3474e40ce2d4289e489135153d5803eeddfaf5690820166aa763fe36af91ff54.zip",
         },
         "Description": "/opt/awscli/aws",
       },
@@ -1285,7 +1440,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     "DeployWebsiteCustomResourceD116527B": Object {
       "DeletionPolicy": "Delete",
       "Properties": Object {
-        "DestinationBucketKeyPrefix": "hugo/",
+        "DestinationBucketKeyPrefix": "source/",
         "DestinationBucketName": Object {
           "Ref": "Bucket83908E77",
         },
@@ -1302,7 +1457,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           },
         ],
         "SourceObjectKeys": Array [
-          "bdc166ed37b77876f0d179b2a8f1875d18dbf71b8fc0d2fd6775563649304151.zip",
+          "15e5f98b53011972996f6ac0d0a7a121b0b5ba938efd0bff79ad01a3036ae46f.zip",
         ],
       },
       "Type": "Custom::CDKBucketDeployment",
@@ -1356,7 +1511,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 ],
               },
               "Id": "testDistributionOrigin1F4407531",
-              "OriginPath": "/hugo/public",
+              "OriginPath": "/artifacts/staticPages",
               "S3OriginConfig": Object {
                 "OriginAccessIdentity": Object {
                   "Fn::Join": Array [
@@ -1392,14 +1547,14 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         "Targets": Array [
           Object {
             "Arn": Object {
-              "Ref": "GenArticleAndHugoBuildFB052553",
+              "Ref": "DailyJobFDEAA19A",
             },
             "Id": "Target0",
             "InputTransformer": Object {
               "InputPathsMap": Object {
                 "time": "$.time",
               },
-              "InputTemplate": "{\\"time\\":<time>,\\"isDraft\\":true}",
+              "InputTemplate": "{\\"time\\":<time>,\\"isDraft\\":true,\\"lang\\":[\\"ja\\",\\"en\\"]}",
             },
             "RetryPolicy": Object {
               "MaximumEventAgeInSeconds": 3600,
@@ -1407,7 +1562,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             },
             "RoleArn": Object {
               "Fn::GetAtt": Array [
-                "GenArticleAndHugoBuildEventsRoleF4F3614D",
+                "DailyJobEventsRoleC77D9BF1",
                 "Arn",
               ],
             },
@@ -1415,257 +1570,6 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         ],
       },
       "Type": "AWS::Events::Rule",
-    },
-    "GenArticleAndHugoBuildEventsRoleDefaultPolicyB4F428EA": Object {
-      "Properties": Object {
-        "PolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "states:StartExecution",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Ref": "GenArticleAndHugoBuildFB052553",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "GenArticleAndHugoBuildEventsRoleDefaultPolicyB4F428EA",
-        "Roles": Array [
-          Object {
-            "Ref": "GenArticleAndHugoBuildEventsRoleF4F3614D",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "GenArticleAndHugoBuildEventsRoleF4F3614D": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": "events.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "GenArticleAndHugoBuildFB052553": Object {
-      "DependsOn": Array [
-        "GenArticleAndHugoBuildRoleDefaultPolicy2FCA2E0E",
-        "GenArticleAndHugoBuildRoleD5C7A3BA",
-      ],
-      "Properties": Object {
-        "DefinitionString": Object {
-          "Fn::Join": Array [
-            "",
-            Array [
-              "{\\"StartAt\\":\\"Generate Article\\",\\"States\\":{\\"Generate Article\\":{\\"Type\\":\\"Parallel\\",\\"Next\\":\\"Hugo Build & Deploy\\",\\"Branches\\":[{\\"StartAt\\":\\"Japanese Article\\",\\"States\\":{\\"Japanese Article\\":{\\"Next\\":\\"Japanese Thumbnail\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreatePostFunction56510812",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"ja\\"}}},\\"Japanese Thumbnail\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreateThumbnailFunction0A22F1F7",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload.$\\":\\"$\\"}}}},{\\"StartAt\\":\\"English Article\\",\\"States\\":{\\"English Article\\":{\\"Next\\":\\"Englis Thumbnail\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreatePostFunction56510812",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload\\":{\\"input.$\\":\\"$\\",\\"lang\\":\\"en\\"}}},\\"Englis Thumbnail\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::lambda:invoke\\",\\"Parameters\\":{\\"FunctionName\\":\\"",
-              Object {
-                "Fn::GetAtt": Array [
-                  "CreateThumbnailFunction0A22F1F7",
-                  "Arn",
-                ],
-              },
-              "\\",\\"Payload.$\\":\\"$\\"}}}}]},\\"Hugo Build & Deploy\\":{\\"End\\":true,\\"Type\\":\\"Task\\",\\"Resource\\":\\"arn:",
-              Object {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::codebuild:startBuild.sync\\",\\"Parameters\\":{\\"ProjectName\\":\\"",
-              Object {
-                "Ref": "BuildStaticPages05E1D87F",
-              },
-              "\\"}}}}",
-            ],
-          ],
-        },
-        "RoleArn": Object {
-          "Fn::GetAtt": Array [
-            "GenArticleAndHugoBuildRoleD5C7A3BA",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "AWS::StepFunctions::StateMachine",
-    },
-    "GenArticleAndHugoBuildRoleD5C7A3BA": Object {
-      "Properties": Object {
-        "AssumeRolePolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": Object {
-                "Service": Object {
-                  "Fn::FindInMap": Array [
-                    "ServiceprincipalMap",
-                    Object {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "GenArticleAndHugoBuildRoleDefaultPolicy2FCA2E0E": Object {
-      "Properties": Object {
-        "PolicyDocument": Object {
-          "Statement": Array [
-            Object {
-              "Action": Array [
-                "codebuild:StartBuild",
-                "codebuild:StopBuild",
-                "codebuild:BatchGetBuilds",
-                "codebuild:BatchGetReports",
-              ],
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::GetAtt": Array [
-                  "BuildStaticPages05E1D87F",
-                  "Arn",
-                ],
-              },
-            },
-            Object {
-              "Action": Array [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule",
-              ],
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    "arn:",
-                    Object {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":events:",
-                    Object {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":rule/StepFunctionsGetEventForCodeBuildStartBuildRule",
-                  ],
-                ],
-              },
-            },
-            Object {
-              "Action": "lambda:InvokeFunction",
-              "Effect": "Allow",
-              "Resource": Array [
-                Object {
-                  "Fn::GetAtt": Array [
-                    "CreatePostFunction56510812",
-                    "Arn",
-                  ],
-                },
-                Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      Object {
-                        "Fn::GetAtt": Array [
-                          "CreatePostFunction56510812",
-                          "Arn",
-                        ],
-                      },
-                      ":*",
-                    ],
-                  ],
-                },
-              ],
-            },
-            Object {
-              "Action": "lambda:InvokeFunction",
-              "Effect": "Allow",
-              "Resource": Array [
-                Object {
-                  "Fn::GetAtt": Array [
-                    "CreateThumbnailFunction0A22F1F7",
-                    "Arn",
-                  ],
-                },
-                Object {
-                  "Fn::Join": Array [
-                    "",
-                    Array [
-                      Object {
-                        "Fn::GetAtt": Array [
-                          "CreateThumbnailFunction0A22F1F7",
-                          "Arn",
-                        ],
-                      },
-                      ":*",
-                    ],
-                  ],
-                },
-              ],
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "GenArticleAndHugoBuildRoleDefaultPolicy2FCA2E0E",
-        "Roles": Array [
-          Object {
-            "Ref": "GenArticleAndHugoBuildRoleD5C7A3BA",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
     },
     "HugoConfigChanedRuleB01C6DF5": Object {
       "Properties": Object {
@@ -1681,7 +1585,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             },
             "object": Object {
               "key": Array [
-                "hugo/config.yml",
+                "source/config.yml",
               ],
             },
           },
@@ -1696,15 +1600,17 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         "Targets": Array [
           Object {
             "Arn": Object {
-              "Fn::GetAtt": Array [
-                "BuildStaticPages05E1D87F",
-                "Arn",
-              ],
+              "Ref": "DailyJobFDEAA19A",
             },
             "Id": "Target0",
+            "Input": "{\\"lang\\":[]}",
+            "RetryPolicy": Object {
+              "MaximumEventAgeInSeconds": 3600,
+              "MaximumRetryAttempts": 3,
+            },
             "RoleArn": Object {
               "Fn::GetAtt": Array [
-                "BuildStaticPagesEventsRole9EC715D4",
+                "DailyJobEventsRoleC77D9BF1",
                 "Arn",
               ],
             },
@@ -1723,7 +1629,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "558dc75fbdc793c8e2f64f85d2d7ed2cb820c727ec7e9b08666ad1af0103992e.zip",
+          "S3Key": "e45ee2082d227db1b6f0292696ce5ce2b061c105d15efb341925ca040d1feb68.zip",
         },
         "Handler": "index.handler",
         "Role": Object {
@@ -1830,19 +1736,19 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     "Weekday9amRule073FD22A": Object {
       "Properties": Object {
         "Description": "[JST] 9AM Weekday",
-        "ScheduleExpression": "cron(0 0 ? * MON-SAT *)",
+        "ScheduleExpression": "cron(0 0 ? * MON-FRI *)",
         "State": "ENABLED",
         "Targets": Array [
           Object {
             "Arn": Object {
-              "Ref": "GenArticleAndHugoBuildFB052553",
+              "Ref": "DailyJobFDEAA19A",
             },
             "Id": "Target0",
             "InputTransformer": Object {
               "InputPathsMap": Object {
                 "time": "$.time",
               },
-              "InputTemplate": "{\\"time\\":<time>,\\"isDraft\\":false}",
+              "InputTemplate": "{\\"time\\":<time>,\\"isDraft\\":false,\\"lang\\":[\\"ja\\",\\"en\\"]}",
             },
             "RetryPolicy": Object {
               "MaximumEventAgeInSeconds": 3600,
@@ -1850,7 +1756,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             },
             "RoleArn": Object {
               "Fn::GetAtt": Array [
-                "GenArticleAndHugoBuildEventsRoleF4F3614D",
+                "DailyJobEventsRoleC77D9BF1",
                 "Arn",
               ],
             },
