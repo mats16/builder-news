@@ -19,6 +19,7 @@ const hugoContentPath = process.env.HUGO_CONTENT_PATH!;
 
 const s3 = new S3Client({});
 
+/** S3 Object のメタデータを取得する */
 const getMetadata = async (bucket: string, key: string, metadataKey: string): Promise<string|undefined> => {
   const cmd = new HeadObjectCommand({
     Bucket: bucket,
@@ -33,6 +34,7 @@ const getMetadata = async (bucket: string, key: string, metadataKey: string): Pr
   }
 };
 
+/** Amazon Translate による翻訳 */
 const translate = async (text: string, sourceLanguageCode: string, targetLanguageCode: string) => {
   const client = new TranslateClient({});
   const cmd = new TranslateTextCommand({
@@ -44,6 +46,7 @@ const translate = async (text: string, sourceLanguageCode: string, targetLanguag
   return TranslatedText || text;
 };
 
+/** RSS Feed から指定範囲の記事を取得する */
 const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date) => {
   const parser = new Parser();
   try {
@@ -61,6 +64,7 @@ const getFeed = async (feedUrl: string, oldestPubDate: Date, latestPubDate: Date
 
 };
 
+/** Step Functions から呼び出される際の input */
 interface Event {
   lang: string;
   time: string;
@@ -145,6 +149,7 @@ export const handler: Handler = async (event: Event, _context) => {
     oss: [],
   };
 
+  /** AWS のアップデート情報 */
   await (async() => {
     const feedUrl = 'https://aws.amazon.com/new/feed/';
     const { items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
@@ -178,6 +183,7 @@ export const handler: Handler = async (event: Event, _context) => {
   //  }
   //};
 
+  /** YouTube のプレイリスト */
   for await (let playlist of source.youtube.playlists) {
     const playlistTitle = (lang == 'ja') ? playlist.title.ja : playlist.title.en;
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlist.id}`;
@@ -190,6 +196,7 @@ export const handler: Handler = async (event: Event, _context) => {
     }
   };
 
+  /** AWS Japan Blogs */
   for await (let blog of source.awsJapanBlogs) {
     const blogTitle = (lang == 'ja') ? blog.title.ja : blog.title.en;
     const feedUrl = `https://aws.amazon.com/jp/blogs/${blog.category}/feed/`;
@@ -202,6 +209,7 @@ export const handler: Handler = async (event: Event, _context) => {
     }
   };
 
+  /** AWS Blogs */
   for await (let blog of source.awsBlogs) {
     const feedUrl = `https://aws.amazon.com/blogs/${blog.category}/feed/`;
     const { title: blogTitle, items } = await getFeed(feedUrl, oldestPubDate, latestPubDate);
@@ -213,6 +221,7 @@ export const handler: Handler = async (event: Event, _context) => {
     }
   };
 
+  /** OSS Projects */
   for await (let repo of source.githubRepos) {
     const repoUrl = `https://github.com/${repo.name}/`;
     const feedUrl = `https://github.com/${repo.name}/releases.atom`;

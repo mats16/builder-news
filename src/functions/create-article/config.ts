@@ -1,14 +1,15 @@
 export const source = {
   youtube: {
-    channels: [
-      {
-        id: 'UCnjKWUK2t5QJYfeqqilhJhQ',
-        title: {
-          ja: 'Amazon Web Services Japan 公式 (日本語)',
-          en: 'Amazon Web Services Japan Official (Japanese)',
-        },
-      },
-    ],
+    // 現在利用していない
+    // channels: [
+    //   {
+    //     id: 'UCnjKWUK2t5QJYfeqqilhJhQ',
+    //     title: {
+    //       ja: 'Amazon Web Services Japan 公式 (日本語)',
+    //       en: 'Amazon Web Services Japan Official (Japanese)',
+    //     },
+    //   },
+    // ],
     playlists: [
       {
         id: 'PLzWGOASvSx6HEHX13_-VP23UW6WB3wY8Z',
@@ -102,7 +103,8 @@ export const source = {
     { title: 'Karpenter', name: 'aws/karpenter' },
     { title: 'Amazon EKS Anywhere', name: 'aws/eks-anywhere' },
   ],
-  connpass: [
-    { id: 'aws-startup-community' },
-  ],
+  // 現在利用していない
+  // connpass: [
+  //   { id: 'aws-startup-community' },
+  // ],
 };
