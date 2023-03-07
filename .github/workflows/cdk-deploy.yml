@@ -35,7 +35,7 @@ jobs:
 
       - name: Deploy
         id: deploy
-        run: $(npm bin)/cdk deploy --require-approval never
+        run: npx projen deploy --require-approval never
         env:
           CUSTOM_DOMAIN_NAMES: ${{ secrets.CUSTOM_DOMAIN_NAMES }}
           ACM_ARN: ${{ secrets.ACM_ARN }}
