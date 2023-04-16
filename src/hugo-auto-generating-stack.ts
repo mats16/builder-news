@@ -32,7 +32,7 @@ export class HugoStack extends Stack {
 
     const { customDomainNames, acmArn, hugoEnv, hugoGoogleAnalytics, hugoDisqusShortname } = props.config;
 
-    const hugoVersion = '0.98.0';
+    const hugoVersion = '0.111.3';
 
     const buildSourcePath = 'source';
     const buildCachePath = 'cache';

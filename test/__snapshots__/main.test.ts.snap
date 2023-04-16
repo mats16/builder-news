@@ -420,12 +420,12 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             Object {
               "Name": "HUGO_BINARY_URL",
               "Type": "PLAINTEXT",
-              "Value": "https://github.com/gohugoio/hugo/releases/download/v0.98.0/hugo_0.98.0_Linux-64bit.tar.gz",
+              "Value": "https://github.com/gohugoio/hugo/releases/download/v0.111.3/hugo_0.111.3_Linux-64bit.tar.gz",
             },
             Object {
               "Name": "HUGO_BINARY_LOCAL",
               "Type": "PLAINTEXT",
-              "Value": "/tmp/hugo_0.98.0.tar.gz",
+              "Value": "/tmp/hugo_0.111.3.tar.gz",
             },
             Object {
               "Name": "HUGO_BASEURL",
@@ -1457,7 +1457,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           },
         ],
         "SourceObjectKeys": Array [
-          "15e5f98b53011972996f6ac0d0a7a121b0b5ba938efd0bff79ad01a3036ae46f.zip",
+          "6de3273279e69967243cb6e1e61f35963e0e94d4add91dbc5389c481a9cb0c3a.zip",
         ],
       },
       "Type": "Custom::CDKBucketDeployment",
