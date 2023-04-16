@@ -1,9 +1,27 @@
 {
-  "image": "ghcr.io/mats16/devcontainer-for-aws:latest",
-  "mounts": [
-      "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
-  "extensions": [
-      "dbaeumer.vscode-eslint"
-  ]
+  "name": "Node.js",
+  "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
+  "postCreateCommand": "apt-get update && apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev && yarn install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        }
+      },
+      "extensions": [
+          "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "remoteUser": "node",
+  "features": {
+    "aws-cli": "latest",
+    "docker-from-docker": {
+      "version": "latest"
+    }
+  }
 }
