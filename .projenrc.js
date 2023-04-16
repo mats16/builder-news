@@ -1,6 +1,7 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
-  cdkVersion: '2.67.0',
+  projenVersion: '0.71.11',
+  cdkVersion: '2.74.0',
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [
@@ -17,7 +18,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   ],
   devDeps: [
     '@types/bluebird',
-    'canvas@2.11.0',
+    'canvas@2.11.2',
   ],
   gitignore: [
     'hugo/public',

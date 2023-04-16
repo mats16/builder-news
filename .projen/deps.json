@@ -10,7 +10,7 @@
     },
     {
       "name": "@types/node",
-      "version": "^12",
+      "version": "^16",
       "type": "build"
     },
     {
@@ -25,12 +25,12 @@
     },
     {
       "name": "aws-cdk",
-      "version": "^2.67.0",
+      "version": "^2.74.0",
       "type": "build"
     },
     {
       "name": "canvas",
-      "version": "2.11.0",
+      "version": "2.11.2",
       "type": "build"
     },
     {
@@ -60,20 +60,17 @@
     },
     {
       "name": "jest-junit",
-      "version": "^13",
-      "type": "build"
-    },
-    {
-      "name": "json-schema",
+      "version": "^15",
       "type": "build"
     },
     {
       "name": "npm-check-updates",
-      "version": "^12",
+      "version": "^16",
       "type": "build"
     },
     {
       "name": "projen",
+      "version": "0.71.11",
       "type": "build"
     },
     {
@@ -82,7 +79,6 @@
     },
     {
       "name": "ts-node",
-      "version": "^9",
       "type": "build"
     },
     {
@@ -123,7 +119,7 @@
     },
     {
       "name": "aws-cdk-lib",
-      "version": "^2.67.0",
+      "version": "^2.74.0",
       "type": "runtime"
     },
     {
