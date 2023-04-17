@@ -103,9 +103,9 @@ export const handler: Handler = async () => {
           description: event.summary,
           link: src.baseUrl + event.id,
           date: new Date(event.createdDate),
-          category: event.tags.map(tag => {
-            return { term: tag };
-          }),
+          //category: event.tags.map(tag => {
+          //  return { term: tag };
+          //}),
           author: [{ name: event.presenter }],
         });
       }
