@@ -379,6 +379,32 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 ],
               },
             },
+            Object {
+              "Action": "s3:GetObject",
+              "Effect": "Allow",
+              "Principal": Object {
+                "CanonicalUser": Object {
+                  "Fn::GetAtt": Array [
+                    "DistributionOrigin2S3OriginE484D4BF",
+                    "S3CanonicalUserId",
+                  ],
+                },
+              },
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    Object {
+                      "Fn::GetAtt": Array [
+                        "Bucket83908E77",
+                        "Arn",
+                      ],
+                    },
+                    "/*",
+                  ],
+                ],
+              },
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -1466,6 +1492,15 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     "Distribution830FAC52": Object {
       "Properties": Object {
         "DistributionConfig": Object {
+          "CacheBehaviors": Array [
+            Object {
+              "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+              "Compress": true,
+              "PathPattern": "startup/*",
+              "TargetOriginId": "testDistributionOrigin25CFAB88F",
+              "ViewerProtocolPolicy": "redirect-to-https",
+            },
+          ],
           "Comment": "Daily AWS",
           "CustomErrorResponses": Array [
             Object {
@@ -1526,6 +1561,28 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 },
               },
             },
+            Object {
+              "DomainName": Object {
+                "Fn::GetAtt": Array [
+                  "Bucket83908E77",
+                  "RegionalDomainName",
+                ],
+              },
+              "Id": "testDistributionOrigin25CFAB88F",
+              "S3OriginConfig": Object {
+                "OriginAccessIdentity": Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      "origin-access-identity/cloudfront/",
+                      Object {
+                        "Ref": "DistributionOrigin2S3OriginE484D4BF",
+                      },
+                    ],
+                  ],
+                },
+              },
+            },
           ],
         },
       },
@@ -1535,6 +1592,14 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       "Properties": Object {
         "CloudFrontOriginAccessIdentityConfig": Object {
           "Comment": "Identity for testDistributionOrigin1F4407531",
+        },
+      },
+      "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+    },
+    "DistributionOrigin2S3OriginE484D4BF": Object {
+      "Properties": Object {
+        "CloudFrontOriginAccessIdentityConfig": Object {
+          "Comment": "Identity for testDistributionOrigin25CFAB88F",
         },
       },
       "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
@@ -1618,6 +1683,216 @@ def submit_response(event: dict, context, response_status: str, error_message: s
         ],
       },
       "Type": "AWS::Events::Rule",
+    },
+    "LoftEventsFeedGenerateFeedFunction334CB8CC": Object {
+      "DependsOn": Array [
+        "LoftEventsFeedGenerateFeedFunctionServiceRoleDefaultPolicy454F3978",
+        "LoftEventsFeedGenerateFeedFunctionServiceRoleEAA0FC74",
+      ],
+      "Properties": Object {
+        "Architectures": Array [
+          "arm64",
+        ],
+        "Code": Object {
+          "S3Bucket": Object {
+            "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
+          },
+          "S3Key": "18fc946ae3dbd9b564e37a1aa4e6440880a65e7375f2d52fe6d50be5bdcdb328.zip",
+        },
+        "Description": "Generate feed",
+        "Environment": Object {
+          "Variables": Object {
+            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
+            "BUCKET_NAME": Object {
+              "Ref": "Bucket83908E77",
+            },
+            "DISTRIBUTION_ID": Object {
+              "Ref": "Distribution830FAC52",
+            },
+            "FEED_KEY": "startup/loft/tokyo/events",
+          },
+        },
+        "Handler": "index.handler",
+        "Role": Object {
+          "Fn::GetAtt": Array [
+            "LoftEventsFeedGenerateFeedFunctionServiceRoleEAA0FC74",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs18.x",
+        "Timeout": 60,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "LoftEventsFeedGenerateFeedFunctionLogRetention6733F838": Object {
+      "Properties": Object {
+        "LogGroupName": Object {
+          "Fn::Join": Array [
+            "",
+            Array [
+              "/aws/lambda/",
+              Object {
+                "Ref": "LoftEventsFeedGenerateFeedFunction334CB8CC",
+              },
+            ],
+          ],
+        },
+        "RetentionInDays": 7,
+        "ServiceToken": Object {
+          "Fn::GetAtt": Array [
+            "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "Custom::LogRetention",
+    },
+    "LoftEventsFeedGenerateFeedFunctionServiceRoleDefaultPolicy454F3978": Object {
+      "Properties": Object {
+        "PolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": Array [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*",
+              ],
+              "Effect": "Allow",
+              "Resource": Array [
+                Object {
+                  "Fn::GetAtt": Array [
+                    "Bucket83908E77",
+                    "Arn",
+                  ],
+                },
+                Object {
+                  "Fn::Join": Array [
+                    "",
+                    Array [
+                      Object {
+                        "Fn::GetAtt": Array [
+                          "Bucket83908E77",
+                          "Arn",
+                        ],
+                      },
+                      "/startup/loft/tokyo/events",
+                    ],
+                  ],
+                },
+              ],
+            },
+            Object {
+              "Action": "cloudfront:CreateInvalidation",
+              "Effect": "Allow",
+              "Resource": Object {
+                "Fn::Join": Array [
+                  "",
+                  Array [
+                    "arn:",
+                    Object {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":cloudfront::",
+                    Object {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":distribution/",
+                    Object {
+                      "Ref": "Distribution830FAC52",
+                    },
+                  ],
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "LoftEventsFeedGenerateFeedFunctionServiceRoleDefaultPolicy454F3978",
+        "Roles": Array [
+          Object {
+            "Ref": "LoftEventsFeedGenerateFeedFunctionServiceRoleEAA0FC74",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "LoftEventsFeedGenerateFeedFunctionServiceRoleEAA0FC74": Object {
+      "Properties": Object {
+        "AssumeRolePolicyDocument": Object {
+          "Statement": Array [
+            Object {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": Object {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": Array [
+          Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "arn:",
+                Object {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+              ],
+            ],
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "LoftEventsFeedScheduledFeedGeneration91659603": Object {
+      "Properties": Object {
+        "ScheduleExpression": "rate(10 minutes)",
+        "State": "ENABLED",
+        "Targets": Array [
+          Object {
+            "Arn": Object {
+              "Fn::GetAtt": Array [
+                "LoftEventsFeedGenerateFeedFunction334CB8CC",
+                "Arn",
+              ],
+            },
+            "Id": "Target0",
+            "RetryPolicy": Object {
+              "MaximumRetryAttempts": 0,
+            },
+          },
+        ],
+      },
+      "Type": "AWS::Events::Rule",
+    },
+    "LoftEventsFeedScheduledFeedGenerationAllowEventRuletestLoftEventsFeedGenerateFeedFunction0BFB1CF715E36CA7": Object {
+      "Properties": Object {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": Object {
+          "Fn::GetAtt": Array [
+            "LoftEventsFeedGenerateFeedFunction334CB8CC",
+            "Arn",
+          ],
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": Object {
+          "Fn::GetAtt": Array [
+            "LoftEventsFeedScheduledFeedGeneration91659603",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
     },
     "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": Object {
       "DependsOn": Array [

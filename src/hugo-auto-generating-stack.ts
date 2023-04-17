@@ -15,6 +15,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as sfnTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
+import { LoftEventsFeed } from './loft-events-feed';
 
 interface HugoStackProps extends StackProps {
   config: {
@@ -82,6 +83,17 @@ export class HugoStack extends Stack {
         { httpStatus: 403, ttl: Duration.days(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
         { httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' },
       ],
+    });
+
+    // Loft 関連の Assets Path
+    cfDistribution.addBehavior('startup/*', new S3Origin(bucket), {
+      viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    });
+
+    // Feed を定期的に作成・更新するジョブ
+    new LoftEventsFeed(this, 'LoftEventsFeed', {
+      bucket: bucket,
+      distribution: cfDistribution,
     });
 
     const hugoBaseUrl = `https://${customDomainNames?.[0]||cfDistribution.distributionDomainName}/`;
