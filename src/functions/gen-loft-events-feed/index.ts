@@ -1,4 +1,3 @@
-import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Handler } from 'aws-lambda';
 import axios from 'axios';
@@ -27,22 +26,6 @@ const putObject = async (bucket: string, key: string, body: string) => {
     Body: body,
     ContentType: 'application/rss+xml; charset=UTF-8',
     CacheControl: 'max-age=600',
-  });
-  await client.send(cmd);
-  client.destroy();
-};
-
-const createInvalidation = async (distributionId: string, item: string) => {
-  const client = new CloudFrontClient({});
-  const cmd = new CreateInvalidationCommand({
-    DistributionId: distributionId,
-    InvalidationBatch: {
-      CallerReference: Date.now().toString(),
-      Paths: {
-        Quantity: 1,
-        Items: [item],
-      },
-    },
   });
   await client.send(cmd);
   client.destroy();
@@ -113,8 +96,6 @@ export const handler: Handler = async () => {
   }));
 
   await putObject(bucketName, feedKey, feed.rss2());
-
-  await createInvalidation(process.env.DISTRIBUTION_ID!, `/${feedKey}`);
 
   return;
 };
