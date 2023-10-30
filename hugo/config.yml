@@ -27,3 +27,5 @@ languages:
   ja:
     languageName: 日本語
     weight: 2
+
+enableRobotsTXT: true
