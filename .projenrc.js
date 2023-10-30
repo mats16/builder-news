@@ -1,7 +1,7 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
   projenVersion: '0.71.11',
-  cdkVersion: '2.74.0',
+  cdkVersion: '2.103.1',
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [

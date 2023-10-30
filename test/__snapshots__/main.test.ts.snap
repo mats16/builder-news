@@ -34,6 +34,9 @@ Object {
       "ap-southeast-3": Object {
         "states": "states.ap-southeast-3.amazonaws.com",
       },
+      "ap-southeast-4": Object {
+        "states": "states.ap-southeast-4.amazonaws.com",
+      },
       "ca-central-1": Object {
         "states": "states.ca-central-1.amazonaws.com",
       },
@@ -66,6 +69,9 @@ Object {
       },
       "eu-west-3": Object {
         "states": "states.eu-west-3.amazonaws.com",
+      },
+      "il-central-1": Object {
+        "states": "states.il-central-1.amazonaws.com",
       },
       "me-central-1": Object {
         "states": "states.me-central-1.amazonaws.com",
@@ -1063,7 +1069,12 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "de91205450df70f943fbde8ad6f4eec685d4c82c11ddec668199a8d2ec4d7065.zip",
+          "S3Key": "9eb41a5505d37607ac419321497a4f8c21cf0ee1f9b4a6b29aa04301aea5c7fd.zip",
+        },
+        "Environment": Object {
+          "Variables": Object {
+            "AWS_CA_BUNDLE": "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+          },
         },
         "Handler": "index.handler",
         "Layers": Array [
@@ -1258,7 +1269,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "Fn::Join": Array [
             "",
             Array [
-              "{\\"StartAt\\":\\"CreateMutiLangArticleTask\\",\\"States\\":{\\"CreateMutiLangArticleTask\\":{\\"Type\\":\\"Map\\",\\"Next\\":\\"BuildStaticPagesTask\\",\\"Parameters\\":{\\"time.$\\":\\"$.time\\",\\"isDraft.$\\":\\"$.isDraft\\",\\"lang.$\\":\\"$$.Map.Item.Value\\"},\\"Iterator\\":{\\"StartAt\\":\\"CreateArticleTask\\",\\"States\\":{\\"CreateArticleTask\\":{\\"Next\\":\\"CreateThumbnailTask\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create content for Hugo\\",\\"Resource\\":\\"arn:",
+              "{\\"StartAt\\":\\"CreateMutiLangArticleTask\\",\\"States\\":{\\"CreateMutiLangArticleTask\\":{\\"Type\\":\\"Map\\",\\"Next\\":\\"BuildStaticPagesTask\\",\\"Parameters\\":{\\"time.$\\":\\"$.time\\",\\"isDraft.$\\":\\"$.isDraft\\",\\"lang.$\\":\\"$$.Map.Item.Value\\"},\\"Iterator\\":{\\"StartAt\\":\\"CreateArticleTask\\",\\"States\\":{\\"CreateArticleTask\\":{\\"Next\\":\\"CreateThumbnailTask\\",\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ClientExecutionTimeoutException\\",\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create content for Hugo\\",\\"Resource\\":\\"arn:",
               Object {
                 "Ref": "AWS::Partition",
               },
@@ -1269,7 +1280,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                   "Arn",
                 ],
               },
-              "\\",\\"Payload.$\\":\\"$\\"}},\\"CreateThumbnailTask\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create thumbnail image for Hugo\\",\\"Resource\\":\\"arn:",
+              "\\",\\"Payload.$\\":\\"$\\"}},\\"CreateThumbnailTask\\":{\\"End\\":true,\\"Retry\\":[{\\"ErrorEquals\\":[\\"Lambda.ClientExecutionTimeoutException\\",\\"Lambda.ServiceException\\",\\"Lambda.AWSLambdaException\\",\\"Lambda.SdkClientException\\"],\\"IntervalSeconds\\":2,\\"MaxAttempts\\":6,\\"BackoffRate\\":2}],\\"Type\\":\\"Task\\",\\"Comment\\":\\"Create thumbnail image for Hugo\\",\\"Resource\\":\\"arn:",
               Object {
                 "Ref": "AWS::Partition",
               },
@@ -1471,7 +1482,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "159ab89ebd881b09102e294af7d28d2d93b12ed951fab089ece691faef1ffd44.zip",
+          "S3Key": "3fb6287214999ddeafa7cd0e3e58bc5144c8678bb720f3b5e45e8fd32f333eb3.zip",
         },
         "Description": "/opt/awscli/aws",
       },
@@ -1895,7 +1906,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "f5b6a6d08a8206e67d0b54e2a29abd7e0472d835abc71037de3a93545b5edacc.zip",
+          "S3Key": "5bc602ecde93c947efe5899ae355f999986a1acbe610b1c0b9c468d738857555.zip",
         },
         "Handler": "index.handler",
         "Role": Object {
@@ -1904,7 +1915,8 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             "Arn",
           ],
         },
-        "Runtime": "nodejs14.x",
+        "Runtime": "nodejs18.x",
+        "Timeout": 900,
       },
       "Type": "AWS::Lambda::Function",
     },
