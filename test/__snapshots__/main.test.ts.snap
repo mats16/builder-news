@@ -496,7 +496,11 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           ],
         },
         "Source": Object {
-          "BuildSpec": "{
+          "BuildSpec": Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "{
   \\"version\\": \\"0.2\\",
   \\"phases\\": {
     \\"install\\": {
@@ -509,14 +513,16 @@ def submit_response(event: dict, context, response_status: str, error_message: s
       \\"commands\\": [
         \\"hugo --buildDrafts\\"
       ]
+    },
+    \\"post_build\\": {
+      \\"commands\\": [
+        \\"aws s3 sync --delete public/ s3://",
+                Object {
+                  "Ref": "Bucket83908E77",
+                },
+                "/artifacts/staticPages/\\"
+      ]
     }
-  },
-  \\"artifacts\\": {
-    \\"name\\": \\"staticPages\\",
-    \\"base-directory\\": \\"public\\",
-    \\"files\\": [
-      \\"**/*\\"
-    ]
   },
   \\"cache\\": {
     \\"paths\\": [
@@ -524,6 +530,9 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     ]
   }
 }",
+              ],
+            ],
+          },
           "Location": Object {
             "Fn::Join": Array [
               "",
