@@ -80,8 +80,8 @@ export class HugoStack extends Stack {
       },
       defaultRootObject: 'index.html',
       errorResponses: [
-        { httpStatus: 403, ttl: Duration.days(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
-        { httpStatus: 404, ttl: Duration.days(1), responsePagePath: '/404.html' },
+        { httpStatus: 403, ttl: Duration.hours(1), responsePagePath: '/404.html', responseHttpStatus: 404 },
+        { httpStatus: 404, ttl: Duration.hours(1), responsePagePath: '/404.html' },
       ],
     });
 
@@ -150,7 +150,7 @@ export class HugoStack extends Stack {
           },
           post_build: {
             commands: [
-              `aws s3 sync --delete public/ s3://${bucket.bucketName}/${buildArtifactsPath}/${artifactName}/`,
+              `aws s3 sync public/ s3://${bucket.bucketName}/${buildArtifactsPath}/${artifactName}/ --delete --cache-control max-age=3600,s-maxage=3600`,
             ],
           },
         },
