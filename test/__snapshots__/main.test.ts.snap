@@ -1697,7 +1697,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "S3Bucket": Object {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "e6ad31f541b8ebf959c5a8a7f8eb8092ccb4bb4d9edf3538918345b7ecfaba29.zip",
+          "S3Key": "e7c58ac9c4fdc59f17c2db8931ac2f9af9834557cb1c971ff07c483e48f25a97.zip",
         },
         "Description": "Generate feed",
         "Environment": Object {
@@ -1787,29 +1787,6 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                   ],
                 },
               ],
-            },
-            Object {
-              "Action": "cloudfront:CreateInvalidation",
-              "Effect": "Allow",
-              "Resource": Object {
-                "Fn::Join": Array [
-                  "",
-                  Array [
-                    "arn:",
-                    Object {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":cloudfront::",
-                    Object {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":distribution/",
-                    Object {
-                      "Ref": "Distribution830FAC52",
-                    },
-                  ],
-                ],
-              },
             },
           ],
           "Version": "2012-10-17",

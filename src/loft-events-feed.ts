@@ -40,9 +40,6 @@ export class LoftEventsFeed extends Construct {
     /** S3 への書き込み権限を付与 */
     bucket.grantReadWrite(generateFeedFunction, feedKey);
 
-    /** CDN のキャッシュ無効化の権限を付与 */
-    distribution.grantCreateInvalidation(generateFeedFunction);
-
     new events.Rule(this, 'ScheduledFeedGeneration', {
       schedule: events.Schedule.rate(cdk.Duration.minutes(10)),
       targets: [new LambdaFunctionTarget(generateFeedFunction, { retryAttempts: 0 })],

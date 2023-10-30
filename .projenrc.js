@@ -9,7 +9,6 @@ const project = new awscdk.AwsCdkTypeScriptApp({
     '@aws-lambda-powertools/logger@1.6.0',
     '@aws-lambda-powertools/metrics@1.6.0',
     '@aws-lambda-powertools/tracer@1.6.0',
-    '@aws-sdk/client-cloudfront',
     '@aws-sdk/client-s3',
     '@aws-sdk/client-translate',
     '@types/aws-lambda',
