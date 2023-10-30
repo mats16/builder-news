@@ -100,8 +100,8 @@ export class HugoStack extends Stack {
 
     /** CodeBuild の環境変数 */
     const buildEnvironmentVariables: {[name: string]: codebuild.BuildEnvironmentVariable} = {
-      HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_Linux-64bit.tar.gz` },
-      HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}.tar.gz` },
+      HUGO_BINARY_URL: { value: `https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_${hugoVersion}_linux-arm64.tar.gz` },
+      HUGO_BINARY_LOCAL: { value: `/tmp/hugo_${hugoVersion}-arm64.tar.gz` },
       HUGO_BASEURL: { value: hugoBaseUrl },
       HUGO_PARAMS_ENV: { value: hugoEnv || 'development' },
     };
@@ -128,7 +128,10 @@ export class HugoStack extends Stack {
         includeBuildId: false,
       }),
       cache: codebuild.Cache.bucket(bucket, { prefix: buildCachePath }),
-      environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_6_0 },
+      environment: {
+        buildImage: codebuild.LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
+        computeType: codebuild.ComputeType.SMALL,
+      },
       timeout: Duration.minutes(10),
       environmentVariables: buildEnvironmentVariables,
       buildSpec: codebuild.BuildSpec.fromObject({
