@@ -1517,7 +1517,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           },
         ],
         "SourceObjectKeys": Array [
-          "6de3273279e69967243cb6e1e61f35963e0e94d4add91dbc5389c481a9cb0c3a.zip",
+          "630d7ed033a6de76a1914960f27dd1874a2eeb3681ff0b562e215137302fe2c0.zip",
         ],
       },
       "Type": "Custom::CDKBucketDeployment",
