@@ -452,12 +452,12 @@ def submit_response(event: dict, context, response_status: str, error_message: s
             Object {
               "Name": "HUGO_BINARY_URL",
               "Type": "PLAINTEXT",
-              "Value": "https://github.com/gohugoio/hugo/releases/download/v0.111.3/hugo_0.111.3_Linux-64bit.tar.gz",
+              "Value": "https://github.com/gohugoio/hugo/releases/download/v0.119.0/hugo_0.119.0_Linux-64bit.tar.gz",
             },
             Object {
               "Name": "HUGO_BINARY_LOCAL",
               "Type": "PLAINTEXT",
-              "Value": "/tmp/hugo_0.111.3.tar.gz",
+              "Value": "/tmp/hugo_0.119.0.tar.gz",
             },
             Object {
               "Name": "HUGO_BASEURL",
