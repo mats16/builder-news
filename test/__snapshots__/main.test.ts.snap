@@ -516,11 +516,11 @@ def submit_response(event: dict, context, response_status: str, error_message: s
     },
     \\"post_build\\": {
       \\"commands\\": [
-        \\"aws s3 sync --delete public/ s3://",
+        \\"aws s3 sync public/ s3://",
                 Object {
                   "Ref": "Bucket83908E77",
                 },
-                "/artifacts/staticPages/\\"
+                "/artifacts/staticPages/ --delete --cache-control max-age=3600,s-maxage=3600\\"
       ]
     }
   },
@@ -1538,13 +1538,13 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           "Comment": "Daily AWS",
           "CustomErrorResponses": Array [
             Object {
-              "ErrorCachingMinTTL": 86400,
+              "ErrorCachingMinTTL": 3600,
               "ErrorCode": 403,
               "ResponseCode": 404,
               "ResponsePagePath": "/404.html",
             },
             Object {
-              "ErrorCachingMinTTL": 86400,
+              "ErrorCachingMinTTL": 3600,
               "ErrorCode": 404,
               "ResponseCode": 404,
               "ResponsePagePath": "/404.html",
