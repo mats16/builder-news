@@ -755,6 +755,20 @@ def submit_response(event: dict, context, response_status: str, error_message: s
           },
         },
         "Handler": "index.handler",
+        "Layers": Array [
+          Object {
+            "Fn::Join": Array [
+              "",
+              Array [
+                "arn:aws:lambda:",
+                Object {
+                  "Ref": "AWS::Region",
+                },
+                ":094274105915:layer:AWSLambdaPowertoolsTypeScript:21",
+              ],
+            ],
+          },
+        ],
         "Role": Object {
           "Fn::GetAtt": Array [
             "CreateArticleFunctionServiceRoleC3DCFA1F",

@@ -1,4 +1,4 @@
-import { Stack, StackProps, Duration, CfnOutput } from 'aws-cdk-lib';
+import { Stack, StackProps, Duration, CfnOutput, Aws } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cf from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
@@ -166,6 +166,15 @@ export class HugoStack extends Stack {
       description: 'Create new article',
       entry: './src/functions/create-article/index.ts',
       handler: 'handler',
+      bundling: {
+        externalModules: [
+          '@aws-sdk/*',
+          '@aws-lambda-powertools/*',
+        ],
+      },
+      layers: [
+        lambda.LayerVersion.fromLayerVersionArn(this, 'LambdaPowertools', `arn:aws:lambda:${Aws.REGION}:094274105915:layer:AWSLambdaPowertoolsTypeScript:21`),
+      ],
       runtime: lambda.Runtime.NODEJS_18_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(3),
