@@ -144,14 +144,21 @@ export class HugoStack extends Stack {
             ],
           },
           build: {
-            commands: ['hugo --buildDrafts'],
+            commands: [
+              'hugo --buildDrafts',
+            ],
+          },
+          post_build: {
+            commands: [
+              `aws s3 sync --delete public/ s3://${bucket.bucketName}/${buildArtifactsPath}/${artifactName}/`,
+            ],
           },
         },
-        artifacts: {
-          'name': artifactName,
-          'base-directory': 'public',
-          'files': ['**/*'],
-        },
+        //artifacts: {
+        //  'name': artifactName,
+        //  'base-directory': 'public',
+        //  'files': ['**/*'],
+        //},
         cache: {
           paths: ['${HUGO_BINARY_LOCAL}'],
         },
