@@ -25,7 +25,7 @@
     },
     {
       "name": "aws-cdk",
-      "version": "^2.74.0",
+      "version": "^2.103.1",
       "type": "build"
     },
     {
@@ -86,23 +86,18 @@
       "type": "build"
     },
     {
-      "name": "@aws-lambda-powertools/commons",
-      "version": "1.6.0",
-      "type": "runtime"
-    },
-    {
       "name": "@aws-lambda-powertools/logger",
-      "version": "1.6.0",
+      "version": "1.14.0",
       "type": "runtime"
     },
     {
       "name": "@aws-lambda-powertools/metrics",
-      "version": "1.6.0",
+      "version": "1.14.0",
       "type": "runtime"
     },
     {
       "name": "@aws-lambda-powertools/tracer",
-      "version": "1.6.0",
+      "version": "1.14.0",
       "type": "runtime"
     },
     {
@@ -119,7 +114,7 @@
     },
     {
       "name": "aws-cdk-lib",
-      "version": "^2.74.0",
+      "version": "^2.103.1",
       "type": "runtime"
     },
     {

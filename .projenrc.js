@@ -1,14 +1,13 @@
 const { awscdk } = require('projen');
 const project = new awscdk.AwsCdkTypeScriptApp({
   projenVersion: '0.71.11',
-  cdkVersion: '2.74.0',
+  cdkVersion: '2.103.1',
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [
-    '@aws-lambda-powertools/commons@1.6.0',
-    '@aws-lambda-powertools/logger@1.6.0',
-    '@aws-lambda-powertools/metrics@1.6.0',
-    '@aws-lambda-powertools/tracer@1.6.0',
+    '@aws-lambda-powertools/logger@1.14.0',
+    '@aws-lambda-powertools/metrics@1.14.0',
+    '@aws-lambda-powertools/tracer@1.14.0',
     '@aws-sdk/client-s3',
     '@aws-sdk/client-translate',
     '@types/aws-lambda',
