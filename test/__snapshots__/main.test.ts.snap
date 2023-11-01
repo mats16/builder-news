@@ -520,7 +520,7 @@ def submit_response(event: dict, context, response_status: str, error_message: s
                 Object {
                   "Ref": "Bucket83908E77",
                 },
-                "/artifacts/staticPages/ --delete --cache-control max-age=3600,s-maxage=3600\\"
+                "/artifacts/staticPages/ --delete --size-only --cache-control max-age=3600,s-maxage=3600\\"
       ]
     }
   },

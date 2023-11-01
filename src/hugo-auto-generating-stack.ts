@@ -150,7 +150,7 @@ export class HugoStack extends Stack {
           },
           post_build: {
             commands: [
-              `aws s3 sync public/ s3://${bucket.bucketName}/${buildArtifactsPath}/${artifactName}/ --delete --cache-control max-age=3600,s-maxage=3600`,
+              `aws s3 sync public/ s3://${bucket.bucketName}/${buildArtifactsPath}/${artifactName}/ --delete --size-only --cache-control max-age=3600,s-maxage=3600`,
             ],
           },
         },
