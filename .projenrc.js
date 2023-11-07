@@ -5,9 +5,9 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   defaultReleaseBranch: 'main',
   name: 'daily-aws-news',
   deps: [
-    '@aws-lambda-powertools/logger@1.14.0',
-    '@aws-lambda-powertools/metrics@1.14.0',
-    '@aws-lambda-powertools/tracer@1.14.0',
+    '@aws-lambda-powertools/logger@1.14.2',
+    '@aws-lambda-powertools/metrics@1.14.2',
+    '@aws-lambda-powertools/tracer@1.14.2',
     '@aws-sdk/client-s3',
     '@aws-sdk/client-translate',
     '@types/aws-lambda',

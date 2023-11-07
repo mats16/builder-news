@@ -109,33 +109,33 @@
     "@aws-sdk/util-utf8-browser" "^3.0.0"
     tslib "^1.11.1"
 
-"@aws-lambda-powertools/commons@^1.14.0":
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/commons/-/commons-1.14.0.tgz#0840ed84f03687b4d6fd19a471b8f10ca8120199"
-  integrity sha512-+kxLITfkH/G4C6N9b1kmvT4HSvqxRMtzmghwdiigqSGkRubCCRaxewBIII66DHgpXK5JhoWmTmdsBVwpEWqwvA==
+"@aws-lambda-powertools/commons@^1.14.2":
+  version "1.14.2"
+  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/commons/-/commons-1.14.2.tgz#930dbf80443afcd7bba1603b79bce416ce2f2b89"
+  integrity sha512-pGW2RSeOEbU1e+mj+MlMkaiM4njO289glFjJA1V+H8bmjvHJXaItroH7lutZ8Gde1Iq+5WoRVQN8M/xmMNSxIA==
 
-"@aws-lambda-powertools/logger@1.14.0":
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/logger/-/logger-1.14.0.tgz#cd8d255513bf637379384764773505ef89119664"
-  integrity sha512-GIj2MMFwULSKtvwcQqd6BjI5gVie/I7bPYBCfSkEhBFf2CsFPs/B3xJ+E8jMiTdaQdmvE2ykwHhqVgItRaKPvA==
+"@aws-lambda-powertools/logger@1.14.2":
+  version "1.14.2"
+  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/logger/-/logger-1.14.2.tgz#0b511eb574407183d28c1a0a172c4deac3e04cbe"
+  integrity sha512-eUu1qF/8S3H7SquaKjmIj/go/3UDYwsfiJ3My1gtqd9eKRlUPKpvktAeF/+yghcO0BmuA5q1i2hKr8rsJ+2lGg==
   dependencies:
-    "@aws-lambda-powertools/commons" "^1.14.0"
+    "@aws-lambda-powertools/commons" "^1.14.2"
     lodash.merge "^4.6.2"
 
-"@aws-lambda-powertools/metrics@1.14.0":
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/metrics/-/metrics-1.14.0.tgz#bc7c605345502f1701232b2447acb99ee47bdff9"
-  integrity sha512-YWL96uMBv8Oa+0c2jbDNSwwIrOMVQt5eJLJWx8ZHl0bE9OkTvXDd0DnTbVP89MPhcAaQQQSsIretiFSLpShZiw==
+"@aws-lambda-powertools/metrics@1.14.2":
+  version "1.14.2"
+  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/metrics/-/metrics-1.14.2.tgz#597017d9bfa886e0c1101679a5d558e450c41815"
+  integrity sha512-gMMtZnFDVAWDMRpqYcugXjqxiRhp9xABS2pb//PsSPVb3DOCMSmSMsUvJdcZarpOw+9lbwWaj4+kaLR6CfMwxQ==
   dependencies:
-    "@aws-lambda-powertools/commons" "^1.14.0"
+    "@aws-lambda-powertools/commons" "^1.14.2"
 
-"@aws-lambda-powertools/tracer@1.14.0":
-  version "1.14.0"
-  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/tracer/-/tracer-1.14.0.tgz#33859856189e126e3222dc13c26ed5645b61fe11"
-  integrity sha512-pLn8VnyoddwiqvS59qk9c/LMcSvBuYMMYn3+sJyUA9DgxIbMazgr3cyZNnVMwNko7VKhLgBeY1lyrib40jZjhg==
+"@aws-lambda-powertools/tracer@1.14.2":
+  version "1.14.2"
+  resolved "https://registry.yarnpkg.com/@aws-lambda-powertools/tracer/-/tracer-1.14.2.tgz#0ade48674c395f0c07a2cf56c75f5fc33dffa294"
+  integrity sha512-wJqTr7IWQNfVRMpWhn5JFg1Syh9xG+JyqfTsHvQ8USLIzjG5qa5LJKaPVAcugRVN05qzEHYpWKVdrRTEvf663g==
   dependencies:
-    "@aws-lambda-powertools/commons" "^1.14.0"
-    aws-xray-sdk-core "^3.5.1"
+    "@aws-lambda-powertools/commons" "^1.14.2"
+    aws-xray-sdk-core "^3.5.3"
 
 "@aws-sdk/abort-controller@3.55.0":
   version "3.55.0"
@@ -2184,7 +2184,7 @@ aws-cdk@^2.104.0:
   optionalDependencies:
     fsevents "2.3.2"
 
-aws-xray-sdk-core@^3.5.1:
+aws-xray-sdk-core@^3.5.3:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/aws-xray-sdk-core/-/aws-xray-sdk-core-3.5.3.tgz#74bc2079e92672f5270315f6872d97b925529b49"
   integrity sha512-FxDRVvIHqf3bzj76M+LSyh/1V5cYuhn+YLRS+u6Xs6WindPMDn9j03v2PNskPgvUi7pMqU40aVhQphRX/YWTfQ==
