@@ -26,7 +26,7 @@ export class LoftEventsFeed extends Construct {
       description: 'Generate feed',
       entry: './src/functions/gen-loft-events-feed/index.ts',
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: cdk.Duration.minutes(1),
       environment: {
