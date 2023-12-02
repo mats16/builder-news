@@ -274,7 +274,7 @@ export class HugoStack extends Stack {
 
     /** 毎日記事を作成する StateMachine */
     const dailyJob = new sfn.StateMachine(this, 'DailyJob', {
-      definition: createMutiLangArticleTask,
+      definitionBody: sfn.DefinitionBody.fromChainable(createMutiLangArticleTask),
     });
 
     /** 平日９時に記事を生成するルール */
