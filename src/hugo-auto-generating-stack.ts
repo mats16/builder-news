@@ -185,7 +185,7 @@ export class HugoStack extends Stack {
       layers: [
         lambda.LayerVersion.fromLayerVersionArn(this, 'LambdaPowertools', `arn:aws:lambda:${Aws.REGION}:094274105915:layer:AWSLambdaPowertoolsTypeScript:23`),
       ],
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.minutes(3),
       environment: {
